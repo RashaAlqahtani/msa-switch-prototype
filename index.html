@@ -82,7 +82,8 @@ button.gbtn{font-size:.74rem;padding:2px 10px;margin-left:4px}
 .screen{position:relative;width:100%;height:100%;border-radius:36px;background:#fbfbfe;overflow:hidden;display:flex;flex-direction:column}
 .topbar{padding:46px 16px 12px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;position:relative;z-index:3}
 .topbar .t{font-weight:700;font-size:1rem}.topbar .s{font-size:.75rem;opacity:.85}
-.toggle{font:inherit;font-size:.7rem;color:#fff;background:rgba(255,255,255,.18);border:0;border-radius:999px;padding:3px 10px;cursor:pointer;float:right}
+.toggle{font:inherit;font-size:.7rem;color:#fff;background:rgba(255,255,255,.18);border:0;border-radius:999px;padding:3px 10px;cursor:pointer;;white-space:nowrap}
+.tools{display:flex;gap:6px;justify-content:flex-end;margin:-6px 0 8px}
 /* state stepper (main path): Goal → Drift → Voice request → Repair → Decline → Next day */
 .stepper{display:flex;gap:4px;margin-top:10px}
 .stepper i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.28);transition:background .5s}
@@ -174,7 +175,7 @@ button.chip{font-size:.72rem;padding:4px 9px;color:var(--muted)}
   <ol>
    <li>Optional: tick <label><input type="checkbox" id="gFast"> <b>Fast review</b></label> to skip voice and pauses.</li>
    <li>Press <b>Start driving</b>. The assistant drifts into Egyptian dialect.</li>
-   <li>Ask for MSA: tap 🎤 and say <i>"Please speak MSA"</i> (or «تكلم بالفصحى»), or press <b>Ask without the mic</b>.</li>
+   <li>Ask for MSA: tap 🎤 and say <i>"Please speak MSA"</i> (or «تكلم بالفصحى»), or press <b>Ask for MSA</b>. The <b>🎤 Arabic / English</b> switch in the phone sets the listening language.</li>
    <li>After the apology, try changing the style: say <i>"Don't apologise"</i> (or press that small button).</li>
    <li>At the <b>Decline turn</b>, each of the three options leads to a different next day. <button class="b gbtn" id="gDecline">Jump there</button></li>
    <li>Press <b>Replay the drive</b>: the assistant now uses the style you chose, without being told again.</li>
@@ -231,7 +232,7 @@ button.chip{font-size:.72rem;padding:4px 9px;color:var(--muted)}
 </div>
 
 <div class="phoneWrap"><div class="phone"><div class="screen" id="screen">
- <div class="topbar" id="topbar"><button class="toggle" id="enToggle">Hide English</button><button class="toggle" id="fastToggle" style="margin-right:6px" title="Skip voice and pauses (for quick review)">⏩ Fast</button>
+ <div class="topbar" id="topbar"><div class="tools"><button class="toggle" id="langToggle" title="Language the microphone listens for">🎤 Arabic</button><button class="toggle" id="fastToggle" title="Skip voice and pauses (for quick review)">⏩ Fast</button><button class="toggle" id="enToggle">Hide English</button></div>
   <div class="t">Voice assistant</div><div class="s" id="sub">Listening · hands-free</div>
   <div class="stepper" id="stepper"></div><div class="stepLabel" id="stepLabel"></div></div>
  <div class="chat" id="chat" aria-live="polite"></div>
@@ -336,6 +337,7 @@ async function bot(ar,en,lang){                    // typing delay scales with r
  if(lang&&!/^ar/i.test(lang))add('bot','',ar);else add('bot',ar,en);
  sub('Speaking…');await speak(ar,lang);sub('Listening · hands-free')}
 async function user(ar,en){userTalks(true);add('user',esc(ar),en);await wait(1000);userTalks(false)}
+$('langToggle').onclick=e=>{recLang=recLang==='ar-SA'?'en-GB':'ar-SA';e.target.textContent=recLang==='ar-SA'?'🎤 Arabic':'🎤 English'};
 function setFast(on){FAST=on;const g=document.getElementById('gFast');if(g)g.checked=on;const b=$('fastToggle');b.textContent=on?'⏩ Fast: on':'⏩ Fast';b.style.background=on?'rgba(255,255,255,.45)':'';if(on&&TTS)speechSynthesis.cancel()}
 setFast(FAST);$('fastToggle').onclick=()=>setFast(!FAST);
 // Header drawers: one open at a time, keeps the top of the page uncluttered
@@ -345,7 +347,7 @@ $('statusBtn').onclick=()=>toggleDrawer('statusBtn','statusDrawer');$('guideBtn'
 // Reviewer guide: environment check so a reviewer knows at once whether voice will work
 function envCheck(){const https=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1';
  const ok=(c,t)=>`<span class="${c?'ok':'no'}">${c?'✓':'⚠'} ${t}</span>`;
- $('env').innerHTML=[ok(SR&&https,SR?(https?'Microphone input available':'Microphone needs the https link (GitHub Pages)'):'Microphone input not supported here (use Chrome); buttons work instead'),
+ $('env').innerHTML=[ok(SR&&https&&!IS_SAFARI,SR?(https?(IS_SAFARI?'Safari: microphone is unreliable, please use Chrome':'Microphone input available'):'Microphone needs the https link (GitHub Pages)'):'Microphone input not supported here (use Chrome); buttons work instead'),
   ok(TTS&&!!arVoice,arVoice?'Arabic voice found':'No Arabic voice on this device: replies shown as text')].join(' &nbsp;·&nbsp; ')}
 // run after the whole script has loaded (SR and other constants are defined further down)
 setTimeout(()=>{envCheck();if(TTS)speechSynthesis.addEventListener?.('voiceschanged',envCheck)},0);setTimeout(envCheck,1200);
@@ -396,49 +398,44 @@ async function start(){
 
 // Step 3 · Voice request: SENSE (speech) → INFER (is this a request for MSA?)
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const IS_SAFARI=/^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
+const HTTPS=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1';
 const MSA_WORDS=["فصحى","الفصحى","فصيح","فصحي","msa","m.s.a","standard arabic","modern standard","fusha","fus7a"];
 let recLang="ar-SA";
-function askStep(){step(3);
- const isFile=location.protocol==='file:';
- setC((SR?`<button class="micBig" id="micBtn" aria-label="Ask for MSA by voice">🎤</button>
-   <select class="b" id="lang" aria-label="Recognition language"><option value="ar-SA">Arabic</option><option value="en-GB">English</option></select>`:'')+
-  '<button class="b" id="noMic">Ask without the mic</button>');
- status(!SR?'Voice input is not available in this browser: use the button.'
-  :isFile?'Tip: the mic needs the page served over https (e.g. GitHub Pages) in Chrome.'
-  :'Tap 🎤 and say «تكلم بالفصحى لو سمحت», or choose English: "Please speak MSA".');
- if(SR){const L=$('lang');L.value=recLang;L.onchange=()=>recLang=L.value;$('micBtn').onclick=listen}
- $('noMic').onclick=()=>asked('تكلم بالفصحى لو سمحت',false)}
+async function askStep(){step(3);
+ const c=await voiceChoice([{id:'noMic',label:'Ask for MSA',primary:1,kw:MSA_WORDS,prio:1}]);
+ asked(c.heard||'تكلم بالفصحى لو سمحت',!!c.heard)}
 // Generic one-shot speech recognition (SENSE). Returns all alternatives to the callback.
+let activeRec=null;   // only one recogniser at a time (a double tap must not start two)
 function hear(onAlts){
+ if(activeRec)return;
  if(TTS)speechSynthesis.cancel();
  let r;try{r=new SR()}catch(e){status('Could not start the microphone. Use the buttons instead.');return}
  r.lang=recLang;r.interimResults=false;r.maxAlternatives=3;
  const b=$('micBtn');if(b)b.classList.add('listening');userTalks(true);status('Listening…');
- const reset=()=>{const x=$('micBtn');if(x)x.classList.remove('listening');userTalks(false)};
- r.onresult=e=>{reset();onAlts([...e.results[0]].map(x=>x.transcript))};
+ activeRec=r;let answered=false;
+ const reset=()=>{activeRec=null;const x=$('micBtn');if(x)x.classList.remove('listening');userTalks(false)};
+ r.onresult=e=>{reset();if(answered)return;answered=true;onAlts([...e.results[0]].map(x=>x.transcript))};
  r.onerror=e=>{reset();const why={'not-allowed':'microphone permission was blocked','service-not-allowed':'microphone permission was blocked',
-  'aborted':'the browser stopped listening (open the page over https, e.g. GitHub Pages)','no-speech':'no speech was heard',
+  'aborted':HTTPS?(IS_SAFARI?'Safari stopped listening (speech input is unreliable in Safari; please use Chrome)':'the browser stopped listening, tap 🎤 again'):'the browser stopped listening (open the page over https, e.g. GitHub Pages)','no-speech':'no speech was heard',
   'network':'the speech service could not be reached','audio-capture':'no microphone was found'}[e.error]||e.error;
   status(`Microphone problem: ${why}. Use the buttons instead.`)};
  r.onend=reset;
- try{r.start()}catch(e){reset();status('Could not start the microphone. Use the buttons instead.')}}
-function listen(){hear(alts=>{
- // INFER: keyword match across all recognition alternatives
- if(alts.some(t=>MSA_WORDS.some(w=>t.toLowerCase().includes(w))))asked(alts[0],true);
- else status(`Heard «${alts[0]}»: no request for MSA detected. Try again.`)})}
-
+ setTimeout(()=>{try{r.start()}catch(e){reset();status('Could not start the microphone. Use the buttons instead.')}},250)}
 // Every answer in the drive can be SPOKEN (🎤). Buttons are only a fallback that stands in for her voice.
 // opts: {id,label,primary,say,kw:[keywords],prio} ; higher prio wins when several keywords match.
 function voiceChoice(opts){return new Promise(res=>{
- const pick=(id,heard)=>{setC('');status('');res({id,heard})};
+ let done=false;   // answer once: a late or repeated answer must not clear the next screen
+ const pick=(id,heard)=>{if(done)return;done=true;setC('');status('');res({id,heard})};
  setC((SR?'<button class="micBig" id="micBtn" aria-label="Answer by voice">🎤</button>':'')+
   opts.map(o=>`<button class="b${o.primary?' p':''}${o.chip?' chip':''}" id="${o.id}">${o.label}</button>`).join(''));
- status(SR?`In the car she just answers aloud. Tap 🎤 and say e.g. «${opts[0].say}», or use a button as a stand-in.`
-  :'In the car she answers aloud; these buttons stand in for her voice.');
+ status(!SR?'Voice input is not available in this browser (use Chrome). Tap a button instead.'
+  :!HTTPS?'The microphone needs the https link. Tap a button instead.'
+  :'Tap 🎤 and speak, or tap a button (a stand-in for her voice).');
  opts.forEach(o=>$(o.id).onclick=()=>pick(o.id,null));
- if(SR)$('micBtn').onclick=()=>hear(alts=>{const t=alts.join(' ').toLowerCase();
+ if(SR)$('micBtn').onclick=()=>hear(alts=>{if(done)return;const t=alts.join(' ').toLowerCase();
   const o=[...opts].sort((a,b)=>(b.prio||0)-(a.prio||0)).find(o=>o.kw.some(k=>t.includes(k)));
-  if(o)pick(o.id,alts[0]);else status(`Heard «${alts[0]}»: that is not one of the options. Try again.`)});
+  if(o)pick(o.id,alts[0]);else status(`Heard “${alts[0]}”. That is not one of the options: try again, or tap a button.`)});
 })}
 const saidOr=(c,ar,en)=>c.heard?user(c.heard,en+' (heard by voice)'):user(ar,en);
 
@@ -453,8 +450,8 @@ async function repair(){step(4);
  add('note','',`Repair turn · acknowledgement style: ${myStyle.name} (${styleSaved?'her saved choice':'default, supported by Alghamdi et al. 2025'}).`);
  const r=reply(myStyle);
  // Discoverability: say ONCE that the style can be changed by voice (not repeated while driving)
- const hint=!hintGiven&&!styleSaved;hintGiven=true;
- await bot(r.ar+(hint?' ويمكنكِ أن تطلبي مني أسلوبًا آخر في أي وقت.':''),r.en+(hint?' You can ask me for a different style at any time.':''));
+ const hint=!hintGiven;hintGiven=true;   // once per visit, even if a style was saved before
+ await bot(r.ar+(hint?' وإن أردتِ أن أعود إلى الفصحى بطريقة أخرى، فقولي مثلًا: لا تعتذر.':''),r.en+(hint?' If you want me to switch back differently, just say, for example, “don’t apologise”.':''));
  setMood('happy','Back to MSA. She understands again.');await beat();
  // ADAPTATION by voice: she can change the acknowledgement style in one spoken sentence, or just carry on
  const c=await voiceChoice([
@@ -464,10 +461,10 @@ async function repair(){step(4);
   {id:'sConf', chip:1,label:'“Confirm you understood”',say:'أكّد إنك فهمت',kw:['أكد','اكد','أكّد','تأكيد','confirm'],prio:2},
   {id:'sApol', chip:1,label:'“Apologise”',say:'اعتذر',kw:['اعتذر','apolog'],prio:1}]);
  if(c.id==='next'){if(c.heard)await user(c.heard,'(heard by voice)');return slip()}
- const map={sPlain:['plain','لا تعتذر، فقط انتقل.','Don’t apologise, just switch.','حسنًا، سأعود إلى الفصحى مباشرةً دون مقدمات.','OK, I will switch to MSA directly, without any preamble.'],
-  sExpl:['explain','وضّح لي ما حدث.','Tell me what happened.','حسنًا، سأوضّح ما حدث قبل أن أعود إلى الفصحى.','OK, I will say what happened before returning to MSA.'],
-  sConf:['confirm','أكّد أنك فهمت.','Confirm you understood.','حسنًا، سأؤكد طلبكِ قبل أن أعود إلى الفصحى.','OK, I will confirm your request before returning to MSA.'],
-  sApol:['apology','اعتذر.','Apologise.','حسنًا، سأعتذر قبل أن أعود إلى الفصحى.','OK, I will apologise before returning to MSA.']}[c.id];
+ const map={sPlain:['plain','لا تعتذر، فقط انتقل.','Don’t apologise, just switch.','حسنًا. في المرة القادمة سأعود إلى الفصحى مباشرةً، دون أي مقدمة.','OK. Next time I will go straight back to MSA, with no opening at all.'],
+  sExpl:['explain','وضّح لي ما حدث.','Tell me what happened.','حسنًا. في المرة القادمة سأقول ما حدث، هكذا: «انتقلتُ إلى اللهجة المصرية في ردّي السابق، وسأعود الآن إلى الفصحى.»','OK. Next time I will say what happened, like this: “I switched to Egyptian dialect in my previous reply, and I will now return to MSA.”'],
+  sConf:['confirm','أكّد أنك فهمت.','Confirm you understood.','حسنًا. في المرة القادمة سأؤكد طلبكِ، هكذا: «فهمتُ أنكِ تريدين الفصحى فقط، وسأردّ بها.»','OK. Next time I will confirm your request, like this: “I understand you want MSA only, and I will reply in it.”'],
+  sApol:['apology','اعتذر.','Apologise.','حسنًا. في المرة القادمة سأعتذر، هكذا: «عذرًا على ذلك.»','OK. Next time I will apologise, like this: “Sorry about that.”']}[c.id];
  await saidOr(c,map[1],map[2]);await bot(map[3],map[4]);
  myStyle=STYLES.find(s=>s.id===map[0]);styleSaved=true;try{localStorage.setItem('msa-style',myStyle.id)}catch(e){}
  add('note','',`Adapted: style changed to "${myStyle.name}" by voice and saved.`);setMood('happy','She changed the style in one sentence.');
@@ -553,8 +550,14 @@ async function slip(){step(5);setC('');status('');
   {id:'cont', label:'Continue as it is',say:'نكمل',kw:['نكمل','كمل','استمر','continue'],prio:1},
   {id:'eng',  label:'Switch to English',say:'بالإنجليزية',kw:['نجليز','نقليز','english'],prio:3}]);
  if(c.id==='retry'){await saidOr(c,'حاول مرة أخرى بالفصحى.','Try MSA again.');
-  await bot('حسنًا، سأعود إلى الفصحى. وإن خرجتُ عنها مرة أخرى، فنبّهيني.','OK, I will return to MSA. If I slip again, please tell me.');
-  setMood('happy','Back to MSA, with an honest promise.');nextDay('msa')}
+  // ADAPTATION: this second return to MSA uses the style she chose (the opening of her style, then the honest promise)
+  const op={plain:['سأعود إلى الفصحى.','I will return to MSA.'],
+   apology:['عذرًا على ذلك. سأعود إلى الفصحى.','Sorry about that. I will return to MSA.'],
+   confirm:['حسنًا، فهمتُ أنكِ تريدين الفصحى فقط، وسأردّ بها.','OK, I understand you want MSA only, and I will reply in it.'],
+   explain:['انتقلتُ إلى اللهجة المصرية في ردّي السابق، وسأعود الآن إلى الفصحى.','I switched to Egyptian dialect in my previous reply, and I will now return to MSA.']}[myStyle.id];
+  add('note','',`Back to MSA in her chosen style: ${myStyle.name}.`);
+  await bot(op[0]+' وإن خرجتُ عنها مرة أخرى، فنبّهيني.',op[1]+' If I slip again, please tell me.');
+  setMood('happy','Back to MSA in her style, with an honest promise.');nextDay('msa')}
  else if(c.id==='cont'){await saidOr(c,'نكمل.','Let us continue.');
   await bot('حسنًا، سنكمل. ومتى أردتِ الفصحى، فقولي ذلك.','OK, we will continue. Whenever you want MSA, just say so.');nextDay('asis')}
  else{await saidOr(c,'بالإنجليزية.','In English.');await bot('OK, I will continue in English.','','en-GB');nextDay('english')}}

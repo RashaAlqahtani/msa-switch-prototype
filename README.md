@@ -2,7 +2,7 @@
 
 **README prose word count: 667** (headings, tables, links and code not counted)
 
-**Live prototype:** LIVE_LINK (open in Chrome; allow the microphone)
+**Live prototype:** https://rashaalqahtani.github.io/msa-switch-prototype/ (open in Chrome; allow the microphone)
 
 A driver talks hands-free to a voice assistant on a phone mount. The assistant drifts into Egyptian dialect; she asks for Modern Standard Arabic (MSA) by voice; it switches back with a short acknowledgement, admits when it cannot keep to MSA, and remembers her choices.
 
@@ -21,7 +21,7 @@ A driver talks hands-free to a voice assistant on a phone mount. The assistant d
 | Replies written by a language model in her chosen style | Planned |
 | Automatic detection of dialect drift before a reply is spoken | Planned |
 
-The system diagram is in `figures/system-diagram.png`.
+The system diagram is in `system-diagram.png`.
 
 ## Technology stack
 
@@ -62,5 +62,5 @@ All six drive paths (3 Decline choices × 2 next-day choices), voice answers (wi
 
 ## Additional files
 
-- `figures/system-diagram.png`: system diagram used in the report.
+- `system-diagram.png`: system diagram used in the report.
 - No ZIP file is needed.
