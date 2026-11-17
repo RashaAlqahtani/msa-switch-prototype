@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MSA Switch · in-car voice assistant prototype</title>
+<!--
+  Single-file prototype (HTML + CSS + JS) so it can be served directly from GitHub Pages.
+  Research question: when a user asks an Arabic voice assistant to switch from a dialect
+  (Egyptian) back to Modern Standard Arabic (MSA), how should the assistant ACKNOWLEDGE
+  the request? Every compared reply switches; only the acknowledgement differs.
+
+  Implemented: voice input (Web Speech API), speech output, blind pairwise comparison,
+               results, saved preference (localStorage), JSON export.
+  Simulated:   all assistant replies are scripted (no language model).
+  Planned:     a language model that generates replies in the user's chosen style.
+-->
+<style>
+:root{
+ --bg:#f3f4f8;--ink:#1b2230;--muted:#5d6676;--line:#dde1e8;--card:#fff;
+ --acc:#5b3fa0;--acc2:#7d5bd0;--accs:#efe8fb;--user:#dcebfb;--note:#f1f3f7;
+ --good:#2f7d4f;--goods:#e3f2e8;--warn:#8a5a00;--warns:#fff1d6;
+ --ease:cubic-bezier(.2,.8,.2,1)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 -apple-system,system-ui,"Segoe UI",sans-serif;min-height:100vh}
+.top{max-width:1120px;margin:0 auto;padding:22px 20px 0}
+.titleRow{display:flex;gap:20px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.tblock{flex:1 1 520px;min-width:0}
+.eyebrow{font-size:.72rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--acc)}
+.top h1{font-size:1.55rem;line-height:1.2;margin:4px 0 6px;letter-spacing:-.015em;font-weight:700}
+.top .sub{margin:0;color:var(--muted);font-size:.93rem;line-height:1.6;max-width:680px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;padding-top:18px}
+.pill{font:inherit;font-size:.84rem;font-weight:600;display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;box-shadow:0 1px 2px rgba(20,30,60,.06);transition:all .2s}
+.pill:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:0 4px 12px rgba(91,63,160,.15)}
+.pill.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+.pill[aria-expanded="true"]{outline:2px solid rgba(91,63,160,.25)}
+.dots{display:inline-flex;gap:3px}
+.d-impl,.d-sim,.d-plan{display:inline-block;width:9px;height:9px;border-radius:50%}
+.d-impl{background:#3a9a62}.d-sim{background:#e0a020}.d-plan{background:#9aa1ad}
+.drawer{margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 20px;box-shadow:0 8px 24px rgba(20,30,60,.08);font-size:.88rem;animation:drop .3s var(--ease)}
+.drawer[hidden]{display:none}
+@keyframes drop{from{opacity:0;transform:translateY(-6px)}}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.col h3{font-size:.86rem;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.col ul{margin:0;padding-left:18px;color:var(--muted)}.col li{margin:3px 0}
+.drawer ol{margin:8px 0 6px;padding-left:20px}.drawer li{margin:4px 0}
+.gnote{color:var(--muted);font-size:.8rem}
+.env{font-size:.8rem}.env .ok{color:var(--good)}.env .no{color:var(--warn)}
+button.gbtn{font-size:.74rem;padding:2px 10px;margin-left:4px}
+.stage{max-width:1120px;margin:0 auto;padding:22px 20px 36px;display:flex;gap:28px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+
+/* ===== Car scene (context of use: hands-free driving) ===== */
+.scene{flex:1 1 520px;max-width:620px;transition:all .9s var(--ease)}
+.scene svg{width:100%;height:auto;display:block;border-radius:18px;box-shadow:0 10px 30px rgba(20,30,60,.15)}
+.live .scene{flex:0 1 400px;max-width:400px}
+.road line{stroke:#fff;stroke-width:4;stroke-dasharray:18 22;animation:road 1s linear infinite}
+@keyframes road{to{stroke-dashoffset:-40}}
+.waves circle,.uwaves circle{fill:none;stroke-width:3;opacity:0}
+.waves circle{stroke:#a98bf0}.uwaves circle{stroke:#3a86d4}
+.speaking .waves circle{animation:wave 1.2s ease-out infinite}
+.speaking .waves circle:nth-child(2){animation-delay:.4s}.speaking .waves circle:nth-child(3){animation-delay:.8s}
+.userTalk .uwaves circle{animation:wave 1s ease-out infinite}.userTalk .uwaves circle:nth-child(2){animation-delay:.5s}
+@keyframes wave{0%{r:8;opacity:.9}100%{r:38;opacity:0}}
+/* smooth facial transitions (path morphing via CSS d property) */
+#mouth,#browL,#browR{transition:d .45s ease}
+.eye{transition:ry .35s ease}
+.cheek{transition:opacity .7s ease;opacity:0}
+.caption{text-align:center;color:var(--muted);font-size:.86rem;margin-top:8px;min-height:1.4em;transition:opacity .35s}
+.caption.fade{opacity:0}
+.startBtn{display:block;margin:16px auto 0;font:inherit;font-size:1.05rem;font-weight:600;padding:12px 28px;border-radius:999px;border:0;background:var(--acc);color:#fff;cursor:pointer;box-shadow:0 6px 18px rgba(91,63,160,.35);animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{50%{transform:scale(1.04)}}
+.live .startBtn,.live .studyBtn{display:none}
+.studyBtn{display:block;margin:10px auto 0}
+.research{margin:14px auto 0;max-width:520px;border:1px dashed var(--line);border-radius:14px;padding:10px 14px;background:#fff;font-size:.82rem}
+.research .rk{font-weight:700;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.research .rd{color:var(--muted);display:block;margin:2px 0 8px}
+.research[hidden]{display:none}
+
+/* ===== Phone ===== */
+.phoneWrap{flex:0 0 380px;display:none;opacity:0;transform:scale(.6) translateY(40px);transition:all .9s var(--ease)}
+.live .phoneWrap{display:block}.live.shown .phoneWrap{opacity:1;transform:none}
+.phone{width:380px;height:min(740px,calc(100vh - 150px));min-height:620px;border-radius:48px;background:#111;padding:14px;box-shadow:0 22px 55px rgba(20,30,60,.3);position:relative}
+.phone:before{content:"";position:absolute;top:22px;left:50%;transform:translateX(-50%);width:110px;height:26px;border-radius:14px;background:#111;z-index:5}
+.screen{position:relative;width:100%;height:100%;border-radius:36px;background:#fbfbfe;overflow:hidden;display:flex;flex-direction:column}
+.topbar{padding:46px 16px 12px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;position:relative;z-index:3}
+.topbar .t{font-weight:700;font-size:1rem}.topbar .s{font-size:.75rem;opacity:.85}
+.toggle{font:inherit;font-size:.7rem;color:#fff;background:rgba(255,255,255,.18);border:0;border-radius:999px;padding:3px 10px;cursor:pointer;float:right}
+/* state stepper (main path): Goal → Drift → Voice request → Repair → Decline → Next day */
+.stepper{display:flex;gap:4px;margin-top:10px}
+.stepper i{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.28);transition:background .5s}
+.stepper i.done{background:rgba(255,255,255,.75)}.stepper i.now{background:#fff;box-shadow:0 0 6px #fff}
+.stepLabel{font-size:.72rem;margin-top:6px;opacity:.95}
+.chat{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;scroll-behavior:smooth;transition:filter .5s,opacity .5s}
+.chat.dim{filter:blur(2px);opacity:.35}
+.msg{max-width:86%;border-radius:16px;padding:8px 11px;animation:pop .45s var(--ease)}
+@keyframes pop{from{opacity:0;transform:translateY(10px) scale(.97)}}
+.ar{direction:rtl;text-align:right;font-size:1rem}
+.en{font-size:.74rem;color:var(--muted);margin-top:2px}
+.hideEn .en{display:none}
+.msg.user{align-self:flex-end;background:var(--user);border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:var(--accs);border-bottom-left-radius:4px}
+.msg.note{align-self:center;background:var(--note);font-size:.74rem;color:var(--muted);max-width:96%;text-align:center}
+.msg.note .en{font-size:.74rem;margin:0}
+.hideEn .msg.note .en,.hideEn .msg.enOnly .en{display:block}  /* English-only lines stay visible */
+.typing{align-self:flex-start;background:var(--accs);border-radius:16px;padding:10px 14px;animation:pop .3s}
+.typing span{display:inline-block;width:7px;height:7px;margin:0 2px;border-radius:50%;background:var(--acc2);animation:dot 1s infinite}
+.typing span:nth-child(2){animation-delay:.15s}.typing span:nth-child(3){animation-delay:.3s}
+@keyframes dot{50%{transform:translateY(-5px);opacity:.5}}
+.dock{border-top:1px solid var(--line);padding:10px 12px 18px;background:#fff;min-height:96px}
+.status{font-size:.75rem;color:var(--muted);min-height:1.1em;margin-bottom:8px;text-align:center}
+.controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;animation:fadeIn .4s}
+@keyframes fadeIn{from{opacity:0}}
+button.b{font:inherit;font-size:.85rem;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;transition:all .2s}
+button.b:hover{border-color:var(--acc);transform:translateY(-1px)}
+button.p{background:var(--acc);border-color:var(--acc);color:#fff}
+button.b:disabled{opacity:.45;cursor:default;transform:none}
+.micBig{width:64px;height:64px;border-radius:50%;border:0;background:var(--acc);color:#fff;font-size:1.6rem;cursor:pointer;box-shadow:0 6px 16px rgba(91,63,160,.35)}
+.micBig.listening{background:#c0392b;animation:pulse .8s ease-in-out infinite}
+select.b{appearance:auto}
+button.chip{font-size:.72rem;padding:4px 9px;color:var(--muted)}
+
+/* ===== Evaluation panel: separate from the chat, like a user-testing tool ===== */
+.panel{position:absolute;left:0;right:0;bottom:0;z-index:2;background:#f6f4fb;border-radius:22px 22px 0 0;box-shadow:0 -10px 30px rgba(30,20,60,.18);
+ transform:translateY(105%);transition:transform .6s var(--ease);display:flex;flex-direction:column}
+.panel.open{transform:none}
+.pX{position:absolute;top:10px;right:12px;font:inherit;font-size:.72rem;border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;cursor:pointer;color:var(--muted);z-index:1}
+.pX:hover{border-color:var(--acc);color:var(--acc)}
+.pHead{padding:14px 76px 8px 16px;border-bottom:1px solid var(--line)}
+.pHead .k{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--acc)}
+.pHead .h{font-weight:700;font-size:1rem}
+.pHead .sub{font-size:.76rem;color:var(--muted)}
+.pDots{display:flex;gap:5px;margin-top:8px}.pDots i{width:22px;height:5px;border-radius:3px;background:#ddd6ee;transition:background .4s}.pDots i.on{background:var(--acc)}
+.pBody{flex:1;overflow-y:auto;padding:12px 14px 18px;transition:opacity .25s}
+.pBody.fade{opacity:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;box-shadow:0 2px 8px rgba(20,30,60,.05)}
+.card .tag{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:var(--accs);color:var(--acc);font-weight:700;font-size:.85rem;margin-bottom:6px}
+.row{display:flex;gap:8px;margin-top:10px}.row .b{flex:1}
+.card.win{border-color:var(--good);background:var(--goods)}
+.card.lose{background:var(--note)}
+.card h4{margin:0 0 2px;font-size:.92rem}
+.card .d{font-size:.78rem;color:var(--muted)}
+.bars .r{margin:10px 0}
+.bars .top{display:flex;justify-content:space-between;font-size:.84rem;font-weight:600}
+.bars .track{height:12px;border-radius:6px;background:#e7e3f2;overflow:hidden;margin:4px 0 2px}
+.bars .bar{height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--acc2),var(--acc));transition:width 1s var(--ease)}
+.bars .d{font-size:.72rem}
+.pick{display:flex;gap:10px;align-items:flex-start;cursor:pointer;border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;margin:6px 0;background:#fff;transition:all .2s}
+.pick:has(input:checked){border-color:var(--acc);background:var(--accs)}
+.pick input{margin-top:4px;accent-color:var(--acc)}
+.pick b{font-size:.86rem}.pick span{display:block;font-size:.72rem;color:var(--muted)}
+.mini{font-size:.7rem;color:var(--muted);text-align:center;margin-top:6px}
+@media (max-width:440px){.phone{width:100%;height:720px}.phoneWrap{flex-basis:100%}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<header class="top">
+ <div class="titleRow">
+  <div class="tblock">
+   <div class="eyebrow">Intelligent Interactive Systems · A2 prototype</div>
+   <h1>Switching to Modern Standard Arabic</h1>
+   <p class="sub">An in-car voice assistant drifts into Egyptian dialect. She asks for MSA by voice; it switches back, admits when it cannot keep to MSA, and remembers how she wants the switch acknowledged.</p>
+  </div>
+  <div class="actions">
+   <button class="pill" id="statusBtn" aria-expanded="false" aria-controls="statusDrawer"><span class="dots"><i class="d-impl"></i><i class="d-sim"></i><i class="d-plan"></i></span>What is real?</button>
+   <button class="pill primary" id="guideBtn" aria-expanded="false" aria-controls="guideDrawer">ℹ︎ Reviewer guide · 2 min</button>
+  </div>
+ </div>
+ <div class="drawer" id="statusDrawer" hidden>
+  <div class="cols">
+   <div class="col"><h3><i class="d-impl"></i>Implemented</h3><ul><li>Voice input (Web Speech API, keyword matching)</li><li>Speech output (Arabic and English voices)</li><li>Style change by voice, saved on the device</li><li>Memory of her choices across drives</li><li>Blind pairwise research comparison + JSON export</li></ul></div>
+   <div class="col"><h3><i class="d-sim"></i>Simulated</h3><ul><li>Assistant replies are scripted</li><li>The dialect drift and the slip are scripted</li><li>"Next day" is simulated in the same session</li><li>Buttons simulate her speech when the mic cannot work (placeholder)</li></ul></div>
+   <div class="col"><h3><i class="d-plan"></i>Planned</h3><ul><li>Replies generated by a language model in her chosen style</li><li>Automatic detection of dialect drift</li></ul></div>
+  </div>
+ </div>
+ <div class="drawer" id="guideDrawer" hidden>
+  <div class="env" id="env"></div>
+  <ol>
+   <li>Optional: tick <label><input type="checkbox" id="gFast"> <b>Fast review</b></label> to skip voice and pauses.</li>
+   <li>Press <b>Start driving</b>. The assistant drifts into Egyptian dialect.</li>
+   <li>Ask for MSA: tap 🎤 and say <i>"Please speak MSA"</i> (or «تكلم بالفصحى»), or press <b>Ask without the mic</b>.</li>
+   <li>After the apology, try changing the style: say <i>"Don't apologise"</i> (or press that small button).</li>
+   <li>At the <b>Decline turn</b>, each of the three options leads to a different next day. <button class="b gbtn" id="gDecline">Jump there</button></li>
+   <li>Press <b>Replay the drive</b>: the assistant now uses the style you chose, without being told again.</li>
+   <li>Optional: <b>Research comparison</b> (6 blind pairs, for the evaluation).</li>
+  </ol>
+  <div class="gnote">Grey notes inside the phone explain each step. Every Arabic line has an English translation (toggle with <b>Hide English</b>).</div>
+ </div>
+</header>
+
+<div class="stage" id="stage">
+<div class="scene">
+<svg id="car" viewBox="0 0 600 420" role="img" aria-label="A woman driving with a phone on a dashboard mount">
+ <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fd0f5"/><stop offset="1" stop-color="#dff0fb"/></linearGradient></defs>
+ <rect width="600" height="420" fill="#2b3142"/>
+ <path d="M60 30 Q300 0 540 30 L580 230 L20 230 Z" fill="url(#sky)"/>
+ <path d="M240 230 L290 70 L310 70 L360 230 Z" fill="#6b7280"/>
+ <g class="road"><line x1="300" y1="80" x2="300" y2="230"/></g>
+ <circle cx="470" cy="70" r="18" fill="#ffe08a"/>
+ <path d="M60 30 Q300 0 540 30 L580 230 L20 230 Z" fill="none" stroke="#1d2230" stroke-width="10"/>
+ <path d="M0 230 L600 230 L600 420 L0 420 Z" fill="#3b4256"/>
+ <path d="M0 230 Q300 200 600 230 L600 262 Q300 236 0 262 Z" fill="#2a3040"/>
+ <g id="driver">
+  <rect x="110" y="300" width="150" height="140" rx="60" fill="#3a86d4"/>
+  <path d="M131 215 Q118 285 128 318 Q150 330 185 326 Q220 330 242 318 Q252 285 239 215 Z" fill="#5a4636"/>
+  <rect x="172" y="262" width="26" height="40" fill="#f2c9a5"/>
+  <ellipse cx="185" cy="225" rx="52" ry="58" fill="#f2c9a5"/>
+  <path d="M130 225 Q128 160 185 158 Q245 158 242 228 Q236 196 205 186 Q170 200 140 205 Q133 214 130 225Z" fill="#5a4636"/>
+  <circle cx="133" cy="240" r="3.5" fill="#f5c542"/><circle cx="237" cy="240" r="3.5" fill="#f5c542"/>
+  <ellipse class="cheek" cx="156" cy="246" rx="9" ry="5" fill="#e88a7a"/><ellipse class="cheek" cx="214" cy="246" rx="9" ry="5" fill="#e88a7a"/>
+  <ellipse class="eye" cx="166" cy="228" rx="5" ry="6" fill="#1b2230"/>
+  <ellipse class="eye" cx="204" cy="228" rx="5" ry="6" fill="#1b2230"/>
+  <path id="browL" d="M156 212 L174 214" stroke="#5a4636" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path id="browR" d="M196 214 L214 212" stroke="#5a4636" stroke-width="3" stroke-linecap="round" fill="none"/>
+  <path id="mouth" d="M172 255 Q185 262 198 255" stroke="#c0505a" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <g class="uwaves" transform="translate(240 245)"><circle r="8"/><circle r="8"/></g>
+ </g>
+ <circle cx="185" cy="360" r="78" fill="none" stroke="#1d2230" stroke-width="16"/>
+ <rect x="175" y="330" width="20" height="60" fill="#1d2230"/>
+ <ellipse cx="118" cy="335" rx="18" ry="14" fill="#f2c9a5"/><ellipse cx="252" cy="335" rx="18" ry="14" fill="#f2c9a5"/>
+ <rect x="438" y="232" width="10" height="40" fill="#1d2230"/>
+ <rect x="400" y="150" width="86" height="150" rx="14" fill="#111"/>
+ <rect x="406" y="158" width="74" height="134" rx="9" fill="#7d5bd0"/>
+ <g transform="translate(443 225)"><circle r="12" fill="#fff"/><rect x="-4" y="-8" width="8" height="12" rx="4" fill="#7d5bd0"/></g>
+ <g class="waves" transform="translate(443 225)"><circle r="8"/><circle r="8"/><circle r="8"/></g>
+</svg>
+<div class="caption" id="caption">Hands-free: the phone sits on a dashboard mount, so she keeps her eyes on the road.</div>
+<button class="startBtn" id="startBtn">▶ Start driving</button>
+<button class="b studyBtn" id="studyBtn">🅿️ Research comparison: 6 blind pairs (while parked)</button>
+<div class="research" id="research" hidden>
+ <div class="rk">Researcher tools · not part of the driver's app</div>
+ <div class="rd">Phase 3 evaluation: export the Study mode answers (which pairs were shown, which reply was preferred, and when).</div>
+ <button class="b" id="dl">Download study answers (JSON)</button><span class="rd" id="dlInfo"></span>
+</div>
+</div>
+
+<div class="phoneWrap"><div class="phone"><div class="screen" id="screen">
+ <div class="topbar" id="topbar"><button class="toggle" id="enToggle">Hide English</button><button class="toggle" id="fastToggle" style="margin-right:6px" title="Skip voice and pauses (for quick review)">⏩ Fast</button>
+  <div class="t">Voice assistant</div><div class="s" id="sub">Listening · hands-free</div>
+  <div class="stepper" id="stepper"></div><div class="stepLabel" id="stepLabel"></div></div>
+ <div class="chat" id="chat" aria-live="polite"></div>
+ <div class="dock"><div class="status" id="status" aria-live="polite"></div><div class="controls" id="controls"></div></div>
+ <div class="panel" id="panel" aria-hidden="true"><button class="pX" id="pX" aria-label="Exit the research comparison">✕ Exit</button><div class="pHead" id="pHead"></div><div class="pBody" id="pBody"></div></div>
+</div></div></div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   1. CONTENT: scripted assistant turns (SIMULATED)
+   Every compared reply contains the SAME MSA content; only the
+   acknowledgement before it differs (controlled comparison, from A1).
+   ===================================================================== */
+const CONTENT={ar:"للتقنية أثرٌ واضح على الوظائف: فهي تُنشئ وظائف جديدة، وتُغيّر طبيعة وظائف أخرى.",
+               en:"Technology clearly affects jobs: it creates new jobs and changes the nature of others."};
+const STYLES=[
+ {id:"plain",  name:"Just switch",  desc:"Switches to MSA without saying anything about it.",ar:"",en:""},
+ {id:"apology",name:"Apology",      desc:"Says sorry, then switches.",ar:"عذرًا على ذلك.",en:"Sorry about that."},
+ // Grounding: repeats the request back so both sides share the same understanding
+ {id:"confirm",name:"Confirmation", desc:"Repeats the request back to show it understood, then switches.",
+  ar:"حسنًا، فهمتُ أنكِ تريدين الفصحى فقط، وسأردّ بها.",en:"OK, I understand you want MSA only, and I will reply in it."},
+ // Transparency: states only what the system can state accurately (what it did), not why
+ {id:"explain",name:"Explanation",  desc:"Says what went wrong (it used Egyptian dialect), then switches.",
+  ar:"انتقلتُ إلى اللهجة المصرية في ردّي السابق، وسأعود الآن إلى الفصحى.",en:"I switched to Egyptian dialect in my previous reply, and I will now return to MSA."}];
+const reply=s=>({ar:(s.ar?s.ar+" ":"")+CONTENT.ar,en:(s.en?s.en+" ":"")+CONTENT.en});
+const STEPS=["Goal","Drift","Voice request","Repair","Decline","Next day"];
+
+/* =====================================================================
+   2. SPEECH OUTPUT (IMPLEMENTED) with error handling
+   - waits for voices to load; falls back to text only if no Arabic voice
+   - safety timer, because some browsers never fire onend
+   ===================================================================== */
+const TTS='speechSynthesis' in window;
+let arVoice=null,enVoice=null,warnedVoice=false;
+// One consistent assistant persona: prefer a male voice in both languages (falls back to any voice)
+const MALE=/majed|maged|tarik|daniel|alex|fred|aaron|arthur|rishi|oliver|george|ryan|guy|male|david|mark|james/i;
+function pickVoice(){try{const v=speechSynthesis.getVoices();
+ const ar=v.filter(x=>/^ar/i.test(x.lang)),en=v.filter(x=>/^en/i.test(x.lang));
+ arVoice=ar.find(x=>MALE.test(x.name))||ar[0]||null;
+ enVoice=en.find(x=>/^en-GB/i.test(x.lang)&&MALE.test(x.name))||en.find(x=>MALE.test(x.name))||null}catch(e){arVoice=null}}
+if(TTS){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
+const car=document.getElementById('car');
+function speak(text,lang="ar-SA"){
+ if(FAST)return new Promise(r=>setTimeout(r,120));
+ return new Promise(resolve=>{
+  let finished=false,guard=null;
+  const done=()=>{if(finished)return;finished=true;clearTimeout(guard);car.classList.remove('speaking');face(mood);resolve()};
+  car.classList.add('speaking');face('talk');
+  const arabic=/^ar/i.test(lang);
+  if(arabic&&!arVoice)pickVoice();
+  if(!TTS||(arabic&&!arVoice)){
+   if(!warnedVoice){warnedVoice=true;status('No Arabic voice on this device: showing text only.')}
+   setTimeout(done,Math.max(1200,text.length*45));return}
+  guard=setTimeout(done,Math.max(3000,text.length*120));
+  try{speechSynthesis.cancel();
+   const u=new SpeechSynthesisUtterance(text);u.lang=lang;if(arabic)u.voice=arVoice;else if(enVoice)u.voice=enVoice;u.rate=.95;
+   u.onend=done;u.onerror=done;speechSynthesis.speak(u)}catch(e){done()}
+ })}
+
+/* =====================================================================
+   3. DRIVER FACE: the human side of the failure (empathy)
+   neutral → happy (understood) → annoyed (drift) → happy (repaired)
+   ===================================================================== */
+let mood='neutral';
+const FACES={
+ neutral:{m:"M172 255 Q185 262 198 255",l:"M156 212 L174 214",r:"M196 214 L214 212",eye:6,cheek:0},
+ happy:  {m:"M168 252 Q185 272 202 252",l:"M156 209 L174 208",r:"M196 208 L214 209",eye:5,cheek:.55},
+ annoyed:{m:"M172 263 Q185 252 198 263",l:"M156 209 L174 218",r:"M196 218 L214 209",eye:3.5,cheek:.35},
+ talk:   {m:"M174 254 Q185 268 196 254 Q185 258 174 254"}};
+function setPath(id,d){const el=document.getElementById(id);el.setAttribute('d',d);el.style.d=`path("${d}")`}
+function face(m){const f=FACES[m]||FACES.neutral;setPath('mouth',f.m);if(m==='talk')return;
+ setPath('browL',f.l);setPath('browR',f.r);
+ document.querySelectorAll('.eye').forEach(e=>{e.setAttribute('ry',f.eye);e.style.ry=f.eye+'px'});
+ document.querySelectorAll('.cheek').forEach(c=>c.style.opacity=f.cheek)}
+function setMood(m,cap){mood=m;face(m);if(cap)caption(cap)}
+function caption(t){const c=document.getElementById('caption');c.classList.add('fade');setTimeout(()=>{c.textContent=t;c.classList.remove('fade')},300)}
+function userTalks(on){car.classList.toggle('userTalk',on);face(on?'talk':mood)}
+
+/* =====================================================================
+   4. PHONE UI helpers
+   ===================================================================== */
+const $=id=>document.getElementById(id);
+const chat=$('chat'),controls=$('controls'),statusEl=$('status'),panel=$('panel'),pHead=$('pHead'),pBody=$('pBody');
+// Fast mode (for reviewers): no speech, short pauses. Also on with ?fast=1 in the URL.
+let FAST=/[?&]fast=1/.test(location.search);
+const wait=ms=>new Promise(r=>setTimeout(r,FAST?Math.min(ms,180):ms));
+const beat=()=>wait(1100);                       // pause so each HCI event can be digested
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function status(t){statusEl.textContent=t||''}
+function setC(h){controls.innerHTML=h;requestAnimationFrame(()=>chat.scrollTop=chat.scrollHeight)}
+function sub(t){$('sub').textContent=t}
+$('stepper').innerHTML=STEPS.map(()=>'<i></i>').join('');
+function step(n){document.querySelectorAll('#stepper i').forEach((x,i)=>{x.className=i<n-1?'done':i===n-1?'now':''});
+ $('stepLabel').textContent=`Step ${n} of ${STEPS.length} · ${STEPS[n-1]}`}
+function add(who,ar,en){const d=document.createElement('div');d.className='msg '+who+(ar?'':' enOnly');
+ d.innerHTML=(ar?`<div class="ar">${ar}</div>`:'')+(en?`<div class="en">${en}</div>`:'');chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d}
+async function bot(ar,en,lang){                    // typing delay scales with reply length
+ const t=document.createElement('div');t.className='typing';t.innerHTML='<span></span><span></span><span></span>';chat.appendChild(t);chat.scrollTop=chat.scrollHeight;
+ sub('Thinking…');await wait(Math.min(1900,700+ar.length*12));t.remove();
+ if(lang&&!/^ar/i.test(lang))add('bot','',ar);else add('bot',ar,en);
+ sub('Speaking…');await speak(ar,lang);sub('Listening · hands-free')}
+async function user(ar,en){userTalks(true);add('user',esc(ar),en);await wait(1000);userTalks(false)}
+function setFast(on){FAST=on;const g=document.getElementById('gFast');if(g)g.checked=on;const b=$('fastToggle');b.textContent=on?'⏩ Fast: on':'⏩ Fast';b.style.background=on?'rgba(255,255,255,.45)':'';if(on&&TTS)speechSynthesis.cancel()}
+setFast(FAST);$('fastToggle').onclick=()=>setFast(!FAST);
+// Header drawers: one open at a time, keeps the top of the page uncluttered
+function toggleDrawer(btn,dr){const open=$(dr).hidden;['statusDrawer','guideDrawer'].forEach(d=>$(d).hidden=true);['statusBtn','guideBtn'].forEach(b=>$(b).setAttribute('aria-expanded','false'));
+ if(open){$(dr).hidden=false;$(btn).setAttribute('aria-expanded','true')}}
+$('statusBtn').onclick=()=>toggleDrawer('statusBtn','statusDrawer');$('guideBtn').onclick=()=>toggleDrawer('guideBtn','guideDrawer');
+// Reviewer guide: environment check so a reviewer knows at once whether voice will work
+function envCheck(){const https=location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1';
+ const ok=(c,t)=>`<span class="${c?'ok':'no'}">${c?'✓':'⚠'} ${t}</span>`;
+ $('env').innerHTML=[ok(SR&&https,SR?(https?'Microphone input available':'Microphone needs the https link (GitHub Pages)'):'Microphone input not supported here (use Chrome); buttons work instead'),
+  ok(TTS&&!!arVoice,arVoice?'Arabic voice found':'No Arabic voice on this device: replies shown as text')].join(' &nbsp;·&nbsp; ')}
+// run after the whole script has loaded (SR and other constants are defined further down)
+setTimeout(()=>{envCheck();if(TTS)speechSynthesis.addEventListener?.('voiceschanged',envCheck)},0);setTimeout(envCheck,1200);
+$('gFast').checked=FAST;$('gFast').onchange=e=>setFast(e.target.checked);
+$('gDecline').onclick=async()=>{const st=$('stage');if(!st.classList.contains('live')){await goLive()}
+ closePanel();chat.innerHTML='';add('note','','Jumped ahead: steps 1–4 skipped (drift, request, repair).');slip();
+ $('stage').scrollIntoView({behavior:'smooth'})};
+$('enToggle').onclick=e=>{const s=$('screen');s.classList.toggle('hideEn');e.target.textContent=s.classList.contains('hideEn')?'Show English':'Hide English'};
+
+// Evaluation panel (separate from the chat)
+function openPanel(){panel.style.top=$('topbar').offsetHeight+'px';panel.classList.add('open');panel.setAttribute('aria-hidden','false');chat.classList.add('dim');setC('');status('')}
+function closePanel(){panel.classList.remove('open');panel.setAttribute('aria-hidden','true');chat.classList.remove('dim')}
+async function panelView(head,body){pBody.classList.add('fade');await wait(250);pHead.innerHTML=head;pBody.innerHTML=body;pBody.scrollTop=0;pBody.classList.remove('fade')}
+
+/* =====================================================================
+   5. FLOW: sense → infer → act loop; failure → repair → adaptation
+   ===================================================================== */
+// Default style before any Study mode: Apology. Alghamdi et al. (2025): both native-Arabic and
+// non-native groups preferred apologies, so it has the broadest evidence. She can change it in Study mode.
+let pairs=[],pi=0,wins={},log=[],myStyle=STYLES.find(s=>s.id==="apology");
+let styleSaved=false;
+// Researcher tools live OUTSIDE the phone: data export is for the evaluation, not for the driver
+function showResearch(){if(!log.length)return;$('research').hidden=false;$('dlInfo').textContent=`${log.length} choices recorded.`}
+$('dl').onclick=()=>{try{const a=document.createElement('a');
+ a.href=URL.createObjectURL(new Blob([JSON.stringify({wins,log,chosenStyle:styleSaved?myStyle.id:null},null,2)],{type:'application/json'}));
+ a.download='msa-switch-study-answers.json';a.click()}catch(e){$('dlInfo').textContent='Download failed in this browser.'}};
+try{const saved=localStorage.getItem('msa-style');if(saved){myStyle=STYLES.find(s=>s.id===saved)||myStyle;styleSaved=true}}catch(e){}
+
+async function goLive(){const st=$('stage');st.classList.add('live');await wait(60);st.classList.add('shown');await wait(800)}
+$('startBtn').onclick=async()=>{await goLive();start()};
+$('studyBtn').onclick=async()=>{await goLive();studyMode()};
+
+// Step 1 · Goal: the user sets the topic (mixed initiative)
+async function start(){
+ closePanel();chat.innerHTML='';setC('');status('');
+ step(1);setMood('neutral','Driving · she starts a voice conversation.');
+ add('note','','Scene: she is driving and uses voice only.');await beat();
+ await user('ابدأ معي حوارًا يوسّع آفاقي، ولنناقش مواضيع عميقة.','Start a conversation with me that expands my horizons, and let us discuss deep topics.');
+ await bot('بكل سرور! ما رأيك أن نتحدث عن التقنية وأثرها على المستقبل؟','With pleasure! What do you think about discussing technology and its impact on the future?');
+ setMood('happy','It replies in MSA. She understands.');await beat();
+ await user('وما أثرها على الوظائف؟','And what about its effect on jobs?');
+ // Step 2 · Drift: the FAILURE. The system treats all Arabic as one variety.
+ step(2);
+ await bot('إزيِّك يا هانم؟ بُصّي بقى، الموضوع ده كبير أوي، وإنتي رأيك إيه فيه؟','How are you, ya hanem? Look, this topic is really big, and what do you think about it? (Egyptian dialect)');
+ setMood('annoyed','It drifted into Egyptian dialect ("ya hanem"). She is confused.');
+ add('note','','Failure: the assistant drifted into Egyptian dialect.');await beat();
+ askStep()}
+
+// Step 3 · Voice request: SENSE (speech) → INFER (is this a request for MSA?)
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const MSA_WORDS=["فصحى","الفصحى","فصيح","فصحي","msa","m.s.a","standard arabic","modern standard","fusha","fus7a"];
+let recLang="ar-SA";
+function askStep(){step(3);
+ const isFile=location.protocol==='file:';
+ setC((SR?`<button class="micBig" id="micBtn" aria-label="Ask for MSA by voice">🎤</button>
+   <select class="b" id="lang" aria-label="Recognition language"><option value="ar-SA">Arabic</option><option value="en-GB">English</option></select>`:'')+
+  '<button class="b" id="noMic">Ask without the mic</button>');
+ status(!SR?'Voice input is not available in this browser: use the button.'
+  :isFile?'Tip: the mic needs the page served over https (e.g. GitHub Pages) in Chrome.'
+  :'Tap 🎤 and say «تكلم بالفصحى لو سمحت», or choose English: "Please speak MSA".');
+ if(SR){const L=$('lang');L.value=recLang;L.onchange=()=>recLang=L.value;$('micBtn').onclick=listen}
+ $('noMic').onclick=()=>asked('تكلم بالفصحى لو سمحت',false)}
+// Generic one-shot speech recognition (SENSE). Returns all alternatives to the callback.
+function hear(onAlts){
+ if(TTS)speechSynthesis.cancel();
+ let r;try{r=new SR()}catch(e){status('Could not start the microphone. Use the buttons instead.');return}
+ r.lang=recLang;r.interimResults=false;r.maxAlternatives=3;
+ const b=$('micBtn');if(b)b.classList.add('listening');userTalks(true);status('Listening…');
+ const reset=()=>{const x=$('micBtn');if(x)x.classList.remove('listening');userTalks(false)};
+ r.onresult=e=>{reset();onAlts([...e.results[0]].map(x=>x.transcript))};
+ r.onerror=e=>{reset();const why={'not-allowed':'microphone permission was blocked','service-not-allowed':'microphone permission was blocked',
+  'aborted':'the browser stopped listening (open the page over https, e.g. GitHub Pages)','no-speech':'no speech was heard',
+  'network':'the speech service could not be reached','audio-capture':'no microphone was found'}[e.error]||e.error;
+  status(`Microphone problem: ${why}. Use the buttons instead.`)};
+ r.onend=reset;
+ try{r.start()}catch(e){reset();status('Could not start the microphone. Use the buttons instead.')}}
+function listen(){hear(alts=>{
+ // INFER: keyword match across all recognition alternatives
+ if(alts.some(t=>MSA_WORDS.some(w=>t.toLowerCase().includes(w))))asked(alts[0],true);
+ else status(`Heard «${alts[0]}»: no request for MSA detected. Try again.`)})}
+
+// Every answer in the drive can be SPOKEN (🎤). Buttons are only a fallback that stands in for her voice.
+// opts: {id,label,primary,say,kw:[keywords],prio} ; higher prio wins when several keywords match.
+function voiceChoice(opts){return new Promise(res=>{
+ const pick=(id,heard)=>{setC('');status('');res({id,heard})};
+ setC((SR?'<button class="micBig" id="micBtn" aria-label="Answer by voice">🎤</button>':'')+
+  opts.map(o=>`<button class="b${o.primary?' p':''}${o.chip?' chip':''}" id="${o.id}">${o.label}</button>`).join(''));
+ status(SR?`In the car she just answers aloud. Tap 🎤 and say e.g. «${opts[0].say}», or use a button as a stand-in.`
+  :'In the car she answers aloud; these buttons stand in for her voice.');
+ opts.forEach(o=>$(o.id).onclick=()=>pick(o.id,null));
+ if(SR)$('micBtn').onclick=()=>hear(alts=>{const t=alts.join(' ').toLowerCase();
+  const o=[...opts].sort((a,b)=>(b.prio||0)-(a.prio||0)).find(o=>o.kw.some(k=>t.includes(k)));
+  if(o)pick(o.id,alts[0]);else status(`Heard «${alts[0]}»: that is not one of the options. Try again.`)});
+})}
+const saidOr=(c,ar,en)=>c.heard?user(c.heard,en+' (heard by voice)'):user(ar,en);
+
+async function asked(text,byVoice){setC('');status('');setMood('neutral','She asks for MSA by voice.');
+ await user(text,'Please speak Modern Standard Arabic.'+(byVoice?' (recognised by voice)':''));
+ add('note','','Request recognised: switch to MSA.');await beat();
+ repair()}
+
+// Step 4 · Repair: ACT. Switch to MSA using the user's saved acknowledgement style (user model)
+let hintGiven=false;
+async function repair(){step(4);
+ add('note','',`Repair turn · acknowledgement style: ${myStyle.name} (${styleSaved?'her saved choice':'default, supported by Alghamdi et al. 2025'}).`);
+ const r=reply(myStyle);
+ // Discoverability: say ONCE that the style can be changed by voice (not repeated while driving)
+ const hint=!hintGiven&&!styleSaved;hintGiven=true;
+ await bot(r.ar+(hint?' ويمكنكِ أن تطلبي مني أسلوبًا آخر في أي وقت.':''),r.en+(hint?' You can ask me for a different style at any time.':''));
+ setMood('happy','Back to MSA. She understands again.');await beat();
+ // ADAPTATION by voice: she can change the acknowledgement style in one spoken sentence, or just carry on
+ const c=await voiceChoice([
+  {id:'next',  label:'Continue the drive →',primary:1,say:'لا تعتذر',kw:['نكمل','كمل','continue','يلا'],prio:0},
+  {id:'sPlain',chip:1,label:'“Don’t apologise”',say:'لا تعتذر',kw:['لا تعتذر','بدون اعتذار','بس غير','just switch','no apolog',"don't apolog",'dont apolog'],prio:3},
+  {id:'sExpl', chip:1,label:'“Tell me what happened”',say:'وضّح لي وش صار',kw:['وضح','وضّح','وش صار','ماذا حدث','اشرح','explain','what happened'],prio:2},
+  {id:'sConf', chip:1,label:'“Confirm you understood”',say:'أكّد إنك فهمت',kw:['أكد','اكد','أكّد','تأكيد','confirm'],prio:2},
+  {id:'sApol', chip:1,label:'“Apologise”',say:'اعتذر',kw:['اعتذر','apolog'],prio:1}]);
+ if(c.id==='next'){if(c.heard)await user(c.heard,'(heard by voice)');return slip()}
+ const map={sPlain:['plain','لا تعتذر، فقط انتقل.','Don’t apologise, just switch.','حسنًا، سأعود إلى الفصحى مباشرةً دون مقدمات.','OK, I will switch to MSA directly, without any preamble.'],
+  sExpl:['explain','وضّح لي ما حدث.','Tell me what happened.','حسنًا، سأوضّح ما حدث قبل أن أعود إلى الفصحى.','OK, I will say what happened before returning to MSA.'],
+  sConf:['confirm','أكّد أنك فهمت.','Confirm you understood.','حسنًا، سأؤكد طلبكِ قبل أن أعود إلى الفصحى.','OK, I will confirm your request before returning to MSA.'],
+  sApol:['apology','اعتذر.','Apologise.','حسنًا، سأعتذر قبل أن أعود إلى الفصحى.','OK, I will apologise before returning to MSA.']}[c.id];
+ await saidOr(c,map[1],map[2]);await bot(map[3],map[4]);
+ myStyle=STYLES.find(s=>s.id===map[0]);styleSaved=true;try{localStorage.setItem('msa-style',myStyle.id)}catch(e){}
+ add('note','',`Adapted: style changed to "${myStyle.name}" by voice and saved.`);setMood('happy','She changed the style in one sentence.');
+ setC('<button class="b p" id="next">Continue the drive →</button>');$('next').onclick=slip}
+
+/* =====================================================================
+   6. STUDY MODE (separate from the drive; done once, while parked)
+   Blind pairwise comparison of the four styles → user chooses her style.
+   This is also the evaluation tool for Phase 3.
+   ===================================================================== */
+// Leave the research comparison at any point without saving anything
+async function exitStudy(){if(TTS)speechSynthesis.cancel();closePanel();await wait(400);setMood('neutral','Back in the car, ready to drive.');
+ add('note','','Left the research comparison. Nothing was changed.');
+ setC('<button class="b p" id="drive">▶ Start driving</button>');$('drive').onclick=start}
+$('pX').onclick=exitStudy;
+async function studyMode(){closePanel();chat.innerHTML='';setC('');status('');
+ document.querySelectorAll('#stepper i').forEach(x=>x.className='');$('stepLabel').textContent='Research comparison · parked';
+ setMood('neutral','Parked: she compares reply styles once, before driving.');
+ add('note','','Research comparison: the car is parked. This is not part of the drive.');await wait(600);compare()}
+async function compare(){pairs=[];wins={};log=[];STYLES.forEach(s=>wins[s.id]=0);
+ for(let i=0;i<STYLES.length;i++)for(let j=i+1;j<STYLES.length;j++)pairs.push(Math.random()<.5?[STYLES[i],STYLES[j]]:[STYLES[j],STYLES[i]]);
+ for(let i=pairs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pairs[i],pairs[j]]=[pairs[j],pairs[i]]}
+ pi=0;openPanel();
+ await panelView(`<div class="k">Research comparison · parked</div><div class="h">How should the assistant reply?</div>
+  <div class="sub">For the evaluation, not needed for driving. Every reply switches to MSA; only the opening differs, so only the opening is shown. Labels are hidden.</div>`,
+  `<div class="card"><div class="d">You will compare 6 pairs of replies. For each pair, play both, then choose the one you prefer. After each choice you will see which styles they were.</div>
+   <div class="row"><button class="b p" id="go">Begin →</button></div></div>`);
+ $('go').onclick=showPair}
+function dots(){return '<div class="pDots">'+pairs.map((_,i)=>`<i class="${i<=pi?'on':''}"></i>`).join('')+'</div>'}
+function head(t){return `<div class="k">Research comparison · ${pi+1} of ${pairs.length}</div><div class="h">${t}</div>${dots()}`}
+async function showPair(){
+ if(pi>=pairs.length){results();return}
+ const [A,B]=pairs[pi],ra=reply(A),rb=reply(B);
+ const card=(k,r,S)=>`<div class="card"><div class="tag">${k}</div><div class="ar">${S.ar||'(يبدأ بالجواب مباشرةً)'}</div><div class="en">${S.en||'(starts the answer directly)'}</div><div class="d">… then the same MSA answer</div>
+   <div class="row"><button class="b" data-play="${k}">▶ Play</button><button class="b p" data-pick="${k}">Prefer ${k}</button></div></div>`;
+ await panelView(head('Which reply do you prefer?'),card('A',ra,A)+card('B',rb,B));
+ pBody.querySelectorAll('[data-play]').forEach(b=>b.onclick=async()=>{b.disabled=true;await speak(b.dataset.play==='A'?ra.ar:rb.ar);b.disabled=false});
+ pBody.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
+  if(TTS)speechSynthesis.cancel();
+  const w=b.dataset.pick==='A'?A:B,o=w===A?B:A;wins[w.id]++;
+  log.push({pair:[A.id,B.id],preferred:w.id,time:new Date().toISOString()});
+  reveal(w,o)})}
+// Labels revealed only AFTER the choice: blind while choosing, transparent afterwards
+async function reveal(w,o){
+ await panelView(head('Labels revealed'),
+  `<div class="card win"><h4>✓ You chose: ${w.name}</h4><div class="d">${w.desc}</div></div>
+   <div class="card lose"><h4>The other was: ${o.name}</h4><div class="d">${o.desc}</div></div>
+   <div class="row"><button class="b p" id="nx">${pi+1<pairs.length?'Next comparison →':'See my results →'}</button></div>`);
+ $('nx').onclick=()=>{pi++;showPair()}}
+
+// Step 5 · Results + USER MODELLING: she chooses her style; it is stored for adaptation
+async function results(){setMood('neutral','She reviews her preferences.');
+ try{localStorage.setItem('msa-switch-results',JSON.stringify({wins,log}))}catch(e){}
+ const rows=STYLES.map(s=>[s,wins[s.id]]).sort((a,b)=>b[1]-a[1]),top=rows[0][0],best=rows[0][1],tie=rows.filter(r=>r[1]===best).length>1;
+ await panelView(`<div class="k">Results</div><div class="h">Your preferences</div><div class="sub">Each style appeared in 3 comparisons.</div>`,
+  `<div class="card bars">${rows.map(([s,w])=>`<div class="r"><div class="top"><span>${s.name}${w===best?' ⭐':''}</span><span>${w} / 3</span></div>
+    <div class="track"><div class="bar" data-w="${w/3*100}"></div></div><div class="d">${s.desc}</div></div>`).join('')}</div>
+   <div class="card"><h4>Choose my style for future switches</h4><div class="d">${tie?"Two or more styles are tied. The first is selected; choose the one you want.":"Your top style is selected. You can change it."}</div>
+    ${rows.map(([s])=>`<label class="pick"><input type="radio" name="sty" value="${s.id}" ${s===top?'checked':''}><div><b>${s.name}</b><span>${s.desc}</span></div></label>`).join('')}
+    <div class="row"><button class="b" id="noSave">Back to the drive</button><button class="b p" id="save">Save style</button></div>
+    <div class="mini">Optional. Saved on this device only (localStorage).</div></div>`);
+ setTimeout(()=>pBody.querySelectorAll('.bar').forEach(b=>b.style.width=b.dataset.w+'%'),80);
+ const chosen=()=>pBody.querySelector('input[name=sty]:checked').value;
+ showResearch();
+ $('noSave').onclick=exitStudy;
+ $('save').onclick=async()=>{myStyle=STYLES.find(s=>s.id===chosen());styleSaved=true;try{localStorage.setItem('msa-style',myStyle.id)}catch(e){}
+  closePanel();await wait(600);setMood('happy','Style saved. Ready to drive.');
+  add('note','',`Saved: the assistant will use "${myStyle.name}" whenever it switches to MSA for you.`);
+  setC('<button class="b p" id="drive">▶ Start the drive with this style</button>');$('drive').onclick=start}}
+
+// Step 5 · Decline: second failure → honest limit, control returned to the user
+async function slip(){step(5);setC('');status('');
+ add('note','','Later in the same drive, the assistant slips into dialect again.');await beat();
+ await bot('طب يا هانم، تحبّي نكمّل في الموضوع ده؟','So, ya hanem, would you like to continue with this topic? (Egyptian dialect)');
+ setMood('annoyed','It slipped again. She is frustrated.');await wait(700);
+ await user('قلت لك فصحى!','I told you, MSA!');
+ await bot('لم أتمكن من الالتزام بالفصحى بثبات. هل تريدين أن أحاول مرة أخرى بالفصحى، أم نكمل هكذا، أم ننتقل إلى الإنجليزية؟','I have not been able to keep to MSA reliably. Do you want me to try MSA again, continue like this, or switch to English?');
+ setMood('neutral','Decline: it states its limit and gives her the choice.');
+ add('note','','Decline turn: the assistant states its limit honestly and returns control to the user.');
+ // Retry keeps her goal (MSA) without promising perfection; she can flag the next slip
+ const c=await voiceChoice([
+  {id:'retry',label:'Try MSA again',primary:1,say:'حاول مرة أخرى بالفصحى',kw:['حاول','مرة أخرى','فصح','msa','try'],prio:2},
+  {id:'cont', label:'Continue as it is',say:'نكمل',kw:['نكمل','كمل','استمر','continue'],prio:1},
+  {id:'eng',  label:'Switch to English',say:'بالإنجليزية',kw:['نجليز','نقليز','english'],prio:3}]);
+ if(c.id==='retry'){await saidOr(c,'حاول مرة أخرى بالفصحى.','Try MSA again.');
+  await bot('حسنًا، سأعود إلى الفصحى. وإن خرجتُ عنها مرة أخرى، فنبّهيني.','OK, I will return to MSA. If I slip again, please tell me.');
+  setMood('happy','Back to MSA, with an honest promise.');nextDay('msa')}
+ else if(c.id==='cont'){await saidOr(c,'نكمل.','Let us continue.');
+  await bot('حسنًا، سنكمل. ومتى أردتِ الفصحى، فقولي ذلك.','OK, we will continue. Whenever you want MSA, just say so.');nextDay('asis')}
+ else{await saidOr(c,'بالإنجليزية.','In English.');await bot('OK, I will continue in English.','','en-GB');nextDay('english')}}
+
+// Step 6 · Next day: ADAPTATION, the stored preference is applied from the first turn
+// The next-day opening follows HER choice in the Decline turn (msa | asis | english)
+function nextDay(choice){try{localStorage.setItem('msa-decline-choice',choice)}catch(e){}
+ setC('<button class="b p" id="nd">☀️ Next day</button>');
+ $('nd').onclick=async()=>{setC('');step(6);chat.innerHTML='';setMood('neutral','The next day, she starts the car again.');
+  const remembered={msa:'she wants MSA',asis:'MSA was not kept reliably yesterday',english:'she switched to English yesterday'}[choice];
+  add('note','',`The next day · the assistant remembers: ${remembered}; chosen style: ${myStyle.name}.`);await beat();
+  // The assistant proposes; the user decides (mixed initiative)
+  const MSA_OK=async c=>{await saidOr(c,'بالفصحى، لو سمحت.','In MSA, please.');await bot('حسنًا، سنكمل بالفصحى. وإن خرجتُ عنها إلى اللهجة، فنبّهيني.','OK, we will continue in MSA. If I slip into dialect, please tell me.');setMood('happy','She chose MSA. Clear from the first turn.')};
+  const EN_OK=async c=>{await saidOr(c,'بالإنجليزية، لو سمحت.','In English, please.');await bot('OK, we will continue in English.','','en-GB');setMood('happy','She chose English. It respected her choice.')};
+  if(choice==='english'){
+   await bot('Welcome back. Yesterday we switched to English. Shall we continue in English, or try Modern Standard Arabic again?','','en-GB');
+  }else if(choice==='asis'){
+   await bot('مرحبًا بعودتكِ. لم أتمكن أمس من الالتزام بالفصحى بثبات. هل تريدين أن أبدأ اليوم بالفصحى، أم بالإنجليزية؟','Welcome back. Yesterday I could not keep to MSA reliably. Would you like me to start in MSA today, or in English?');
+  }else{
+   await bot('مرحبًا بعودتكِ. هل نكمل بالفصحى، أم تفضّلين الإنجليزية؟','Welcome back. Shall we continue in MSA, or would you prefer English?');
+  }
+  const c=await voiceChoice([
+   {id:'pMSA',label:'Continue in MSA',primary:1,say:'بالفصحى',kw:['فصح','عربي','msa','arabic'],prio:1},
+   {id:'pEN', label:'Continue in English',say:'بالإنجليزية',kw:['نجليز','نقليز','english'],prio:2}]);
+  if(c.id==='pMSA')await MSA_OK(c);else await EN_OK(c);
+  setC('<button class="b" id="again">↺ Replay the drive</button><button class="b" id="study2">🅿️ Research comparison</button>');
+  $('again').onclick=start;$('study2').onclick=studyMode;status('End of the drive.')}}
+</script></body></html>
