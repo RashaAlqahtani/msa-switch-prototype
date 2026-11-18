@@ -440,7 +440,7 @@ function voiceChoice(opts){return new Promise(res=>{
 const saidOr=(c,ar,en)=>c.heard?user(c.heard,en+' (heard by voice)'):user(ar,en);
 
 async function asked(text,byVoice){setC('');status('');setMood('neutral','She asks for MSA by voice.');
- await user(text,'Please speak Modern Standard Arabic.'+(byVoice?' (recognised by voice)':''));
+ await user(text,'Please speak Modern Standard Arabic.'+(byVoice?' (heard by voice)':''));
  add('note','','Request recognised: switch to MSA.');await beat();
  repair()}
 
