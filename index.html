@@ -431,7 +431,7 @@ function voiceChoice(opts){return new Promise(res=>{
   opts.map(o=>`<button class="b${o.primary?' p':''}${o.chip?' chip':''}" id="${o.id}">${o.label}</button>`).join(''));
  status(!SR?'Voice input is not available in this browser (use Chrome). Tap a button instead.'
   :!HTTPS?'The microphone needs the https link. Tap a button instead.'
-  :'Tap 🎤 and speak, or tap a button (a stand-in for her voice).');
+  :'Tap 🎤 and speak, or tap a button instead of speaking.');
  opts.forEach(o=>$(o.id).onclick=()=>pick(o.id,null));
  if(SR)$('micBtn').onclick=()=>hear(alts=>{if(done)return;const t=alts.join(' ').toLowerCase();
   const o=[...opts].sort((a,b)=>(b.prio||0)-(a.prio||0)).find(o=>o.kw.some(k=>t.includes(k)));
