@@ -270,7 +270,7 @@ const STEPS=["Goal","Drift","Voice request","Repair","Decline","Next day"];
 const TTS='speechSynthesis' in window;
 let arVoice=null,enVoice=null,warnedVoice=false;
 // One consistent assistant persona: prefer a male voice in both languages (falls back to any voice)
-const MALE=/majed|maged|tarik|daniel|alex|fred|aaron|arthur|rishi|oliver|george|ryan|guy|male|david|mark|james/i;
+const MALE=/majed|maged|tarik|daniel|alex|fred|aaron|arthur|rishi|oliver|george|ryan|guy|(?<!fe)male|david|mark|james/i;
 function pickVoice(){try{const v=speechSynthesis.getVoices();
  const ar=v.filter(x=>/^ar/i.test(x.lang)),en=v.filter(x=>/^en/i.test(x.lang));
  arVoice=ar.find(x=>MALE.test(x.name))||ar[0]||null;
@@ -410,18 +410,18 @@ let activeRec=null;   // only one recogniser at a time (a double tap must not st
 function hear(onAlts){
  if(activeRec)return;
  if(TTS)speechSynthesis.cancel();
- let r;try{r=new SR()}catch(e){status('Could not start the microphone. Use the buttons instead.');return}
+ let r;try{r=new SR()}catch(e){status('Could not start the microphone. Tap a button instead.');return}
  r.lang=recLang;r.interimResults=false;r.maxAlternatives=3;
  const b=$('micBtn');if(b)b.classList.add('listening');userTalks(true);status('Listening…');
  activeRec=r;let answered=false;
  const reset=()=>{activeRec=null;const x=$('micBtn');if(x)x.classList.remove('listening');userTalks(false)};
  r.onresult=e=>{reset();if(answered)return;answered=true;onAlts([...e.results[0]].map(x=>x.transcript))};
  r.onerror=e=>{reset();const why={'not-allowed':'microphone permission was blocked','service-not-allowed':'microphone permission was blocked',
-  'aborted':HTTPS?(IS_SAFARI?'Safari stopped listening (speech input is unreliable in Safari; please use Chrome)':'the browser stopped listening, tap 🎤 again'):'the browser stopped listening (open the page over https, e.g. GitHub Pages)','no-speech':'no speech was heard',
+  'aborted':HTTPS?(IS_SAFARI?'Safari stopped listening (speech input is unreliable in Safari; please use Chrome)':'the browser stopped listening'):'the browser stopped listening (open the page over https, e.g. GitHub Pages)','no-speech':'no speech was heard',
   'network':'the speech service could not be reached','audio-capture':'no microphone was found'}[e.error]||e.error;
-  status(`Microphone problem: ${why}. Use the buttons instead.`)};
+  status(`Microphone problem: ${why}. Tap 🎤 to try again, or tap a button instead.`)};
  r.onend=reset;
- setTimeout(()=>{try{r.start()}catch(e){reset();status('Could not start the microphone. Use the buttons instead.')}},250)}
+ setTimeout(()=>{try{r.start()}catch(e){reset();status('Could not start the microphone. Tap a button instead.')}},250)}
 // Every answer in the drive can be SPOKEN (🎤). Buttons are only a fallback that stands in for her voice.
 // opts: {id,label,primary,say,kw:[keywords],prio} ; higher prio wins when several keywords match.
 function voiceChoice(opts){return new Promise(res=>{

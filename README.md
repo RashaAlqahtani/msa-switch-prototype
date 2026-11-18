@@ -1,6 +1,6 @@
 # Switching to Modern Standard Arabic: an in-car voice assistant prototype
 
-**README prose word count: 662** (headings, tables, links and code not counted)
+**README prose word count: 792** (headings, tables, links and code not counted)
 
 **Live prototype:** https://rashaalqahtani.github.io/msa-switch-prototype/ (open in Chrome; allow the microphone)
 
@@ -51,8 +51,10 @@ Main changes, why they were made and what was checked:
 8. **Every answer can be spoken**, not only the first request; buttons are a fallback.
 9. **Honest labels**: the drift, the next day and the buttons are labelled as simulated or placeholder; a "What is real?" panel and a reviewer guide were added.
 10. **Feminine Arabic forms** throughout, because the driver is a woman.
+11. **Found by testing the live site with a real microphone** (commit d9edeae): the end buttons disappeared when the browser delivered the same spoken answer twice, so each question now accepts one answer only; the first voice step looked different from the others, so every step now has the same controls and one Arabic/English switch; Safari stopped listening, so the page now recommends Chrome.
+12. **The chosen style is shown and used in the same drive** (commit d9edeae). At first a style change only took effect after a replay; now the assistant gives an example of the new style at once and uses it the next time it returns to MSA.
 
-All six drive paths (3 Decline choices × 2 next-day choices), voice answers (with a mocked recogniser) and the research comparison were clicked through on a local server with no errors.
+All 30 drive paths (5 choices after the repair × 3 Decline choices × 2 next-day choices) were run automatically, and a 47-point checklist (every expected Arabic line, the research comparison and the page controls) was checked on the live site, with voice answers simulated by a mocked recogniser.
 
 ## AI assistance
 
