@@ -1,6 +1,6 @@
 # Switching to Modern Standard Arabic: an in-car voice assistant prototype
 
-**README prose word count: 792** (headings, tables, links and code not counted)
+**README prose word count: 838** (headings, tables, links and code not counted)
 
 **Live prototype:** https://rashaalqahtani.github.io/msa-switch-prototype/ (open in Chrome; allow the microphone)
 
@@ -61,6 +61,7 @@ All 30 drive paths (5 choices after the repair × 3 Decline choices × 2 next-da
 
 - **My own work:** I designed the interaction, the interface (the car scene, the phone screens and every voice step) and the system diagram (its components, flow, labels and layout). I tested each version and decided every change (examples: the next-day bug, the "from now on" promise, the feminine forms, moving the comparison out of the drive, the default style).
 - **Claude (Anthropic)** wrote the code from my instructions.
+- **Claude** also helped me turn my own notes into academic English for the report. I designed the storyboards (which moments to show and what each frame says) and gave Claude the content; Claude captured the screenshots from the live prototype and arranged them as I specified.
 - **Gemini (Google)** was used only as a checklist: I asked it whether I had followed the steps the brief requires or had missed anything.
 - I checked every Arabic line, the labels for implemented, simulated and planned parts, and the claims about the literature myself.
 
