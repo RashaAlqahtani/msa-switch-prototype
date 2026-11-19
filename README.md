@@ -46,7 +46,7 @@ Main changes, why they were made and what was checked:
 2. **Labels hidden while choosing, shown after each choice**, so style names such as "Explanation" do not bias the choice.
 3. **Decline turn with three options** (try MSA again, continue, switch to English). My original problem was an assistant that claimed to use MSA when it did not; the Decline turn states the limit honestly instead.
 4. **Next day follows her actual choice.** While testing I found the next day always started in MSA even after choosing English. Fixed, and she now chooses the language by voice.
-5. **No promises the assistant cannot keep.** The confirmation reply said it would use MSA "from now on", then the assistant slipped. Removed; later replies say "if I slip, tell me".
+5. **No promises the assistant cannot keep.** The confirmation reply said it would use MSA "from now on", then the assistant slipped. Removed; later replies say "if I slip again, please tell me".
 6. **Default style changed from Confirmation to Apology**, because both groups in Alghamdi et al. (2025) preferred apologies.
 7. **Style change by one spoken sentence** ("don't apologise") instead of a long comparison screen, because a driver needs zero set-up. The assistant mentions this option once only.
 8. **Every answer can be spoken**, not only the first request; buttons are a fallback.

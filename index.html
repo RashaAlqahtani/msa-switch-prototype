@@ -562,7 +562,7 @@ async function slip(){step(5);setC('');status('');
    apology:['أعتذر عن ذلك. سأبقى على الفصحى.','I apologise for that. I will stay in MSA.'],
    confirm:['حسنًا، فهمتُ أنكِ تريدين الفصحى فقط، وسأردّ بها.','OK, I understand you want MSA only, and I will reply in it.'],
    explain:['انتقلتُ إلى اللهجة المصرية قبل قليل، وسأبقى الآن على الفصحى.','I switched to Egyptian dialect a moment ago, and I will now stay in MSA.']}[myStyle.id];
-  add('note','',`Back to MSA in her chosen style: ${myStyle.name}.`);
+  add('note','',styleSaved?`Back to MSA in her chosen style: ${myStyle.name}.`:`Back to MSA in the default style: ${myStyle.name}.`);
   await bot(op[0]?op[0]+' وإن خرجتُ عنها مرة أخرى، فنبّهيني.':'إن خرجتُ عن الفصحى مرة أخرى، فنبّهيني.',op[1]?op[1]+' If I slip again, please tell me.':'If I slip out of MSA again, please tell me.');
   setMood('happy','Back to MSA in her style, with an honest promise.');nextDay('msa')}
  else if(c.id==='cont'){await saidOr(c,'نكمل.','Let us continue.');
@@ -576,7 +576,7 @@ function nextDay(given){try{localStorage.setItem('msa-decline-choice',given)}cat
  $('nd').onclick=async()=>{let choice=given;try{choice=localStorage.getItem('msa-decline-choice')||given}catch(e){}   // the next day reads what was stored
   setC('');step(6);chat.innerHTML='';setMood('neutral','The next day, she starts the car again.');
   const remembered={msa:'she wants MSA',asis:'MSA was not kept reliably yesterday',english:'she switched to English yesterday'}[choice];
-  add('note','',`The next day · the assistant remembers: ${remembered}; chosen style: ${myStyle.name}.`);await beat();
+  add('note','',`The next day · the assistant remembers: ${remembered}; ${styleSaved?'chosen style':'style (default)'}: ${myStyle.name}.`);await beat();
   const END=()=>{setC('<button class="b" id="again">↺ Replay the drive</button><button class="b" id="study2">🅿️ Research comparison</button>');
    $('again').onclick=start;$('study2').onclick=studyMode;status('End of the drive.')};
   // She clearly asked for MSA yesterday: do not ask again, just keep her choice
