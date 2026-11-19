@@ -451,7 +451,10 @@ async function repair(){step(4);
  const r=reply(myStyle);
  // Discoverability: say ONCE that the style can be changed by voice (not repeated while driving)
  const hint=!hintGiven;hintGiven=true;   // once per visit, even if a style was saved before
- await bot(r.ar+(hint?' وإن أردتِ أن أعود إلى الفصحى بطريقة أخرى، فقولي مثلًا: لا تعتذر.':''),r.en+(hint?' If you want me to switch back differently, just say, for example, “don’t apologise”.':''));
+ await bot(r.ar,r.en);
+ // The hint is its own short turn AFTER the answer, and its example is the opposite of the style she just heard
+ if(hint){const ex={apology:['لا تعتذر','don’t apologise'],plain:['اعتذر','apologise'],confirm:['وضّح لي ما حدث','tell me what happened'],explain:['أكّد أنك فهمت','confirm you understood']}[myStyle.id];
+  await bot(`ملاحظة: إن أردتِ أن أعود إلى الفصحى بطريقة أخرى، فقولي مثلًا: «${ex[0]}».`,`Note: if you want me to switch back to MSA differently, just say, for example, “${ex[1]}”.`)}
  setMood('happy','Back to MSA. She understands again.');await beat();
  // ADAPTATION by voice: she can change the acknowledgement style in one spoken sentence, or just carry on
  const c=await voiceChoice([
