@@ -277,8 +277,8 @@ function pickVoice(){try{const v=speechSynthesis.getVoices();
  enVoice=en.find(x=>/^en-GB/i.test(x.lang)&&MALE.test(x.name))||en.find(x=>MALE.test(x.name))||null}catch(e){arVoice=null}}
 if(TTS){pickVoice();speechSynthesis.onvoiceschanged=pickVoice}
 const car=document.getElementById('car');
-function speak(text,lang="ar-SA"){
- if(FAST)return new Promise(r=>setTimeout(r,120));
+function speak(text,lang="ar-SA",always=false){   // always: an explicit ▶ Play speaks even in Fast mode
+ if(FAST&&!always)return new Promise(r=>setTimeout(r,120));
  return new Promise(resolve=>{
   let finished=false,guard=null;
   const done=()=>{if(finished)return;finished=true;clearTimeout(guard);car.classList.remove('speaking');face(mood);resolve()};
@@ -504,7 +504,7 @@ async function showPair(){
  const card=(k,r,S)=>`<div class="card"><div class="tag">${k}</div><div class="ar">${S.ar||'(يبدأ بالجواب مباشرةً)'}</div><div class="en">${S.en||'(starts the answer directly)'}</div><div class="d">… then the same MSA answer</div>
    <div class="row"><button class="b" data-play="${k}">▶ Play</button><button class="b p" data-pick="${k}">Prefer ${k}</button></div></div>`;
  await panelView(head('Which reply do you prefer?'),card('A',ra,A)+card('B',rb,B));
- pBody.querySelectorAll('[data-play]').forEach(b=>b.onclick=async()=>{b.disabled=true;await speak(b.dataset.play==='A'?ra.ar:rb.ar);b.disabled=false});
+ pBody.querySelectorAll('[data-play]').forEach(b=>b.onclick=async()=>{b.disabled=true;await speak(b.dataset.play==='A'?ra.ar:rb.ar,'ar-SA',true);b.disabled=false});
  pBody.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{
   if(TTS)speechSynthesis.cancel();
   const w=b.dataset.pick==='A'?A:B,o=w===A?B:A;wins[w.id]++;
