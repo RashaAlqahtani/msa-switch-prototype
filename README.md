@@ -1,6 +1,6 @@
 # Switching to Modern Standard Arabic: an in-car voice assistant prototype
 
-**README prose word count: 1073** (headings, tables, links and code not counted)
+**README prose word count: 1137** (headings, tables, links and code not counted)
 
 **Live prototype:** https://rashaalqahtani.github.io/msa-switch-prototype/ (open in Chrome; allow the microphone)
 
@@ -57,6 +57,7 @@ Main changes, why they were made and what was checked:
 13. **The hint matches what she just heard.** While reviewing the repair I noticed that after a Confirmation the assistant still said “for example, say: don’t apologise”, although it had not apologised, and the hint was attached to the end of the answer about jobs. The hint is now its own short turn after the answer, and its example is the opposite of the style she just heard (Apology → “don’t apologise”, Just switch → “apologise”, Confirmation → “tell me what happened”, Explanation → “confirm you understood”). Checked for all four styles.
 14. **A clearer way to keep the style.** After the repair the main button said “Continue the drive” and the spoken answer was “نكمل”. While testing I found this unclear: it could mean keeping the style or ignoring the hint, and “نكمل” also means “continue as it is” in the Decline turn. The button is now “Keep this style” and she can say “نفس الطريقة” or “خلّه كذا”. Checked by voice: these phrases keep the style, and “نكمل” still works only in the Decline turn.
 15. **Play always speaks in the research comparison.** While trying the comparison I pressed ▶ Play and heard nothing, because Fast mode (meant for reviewers) turns all speech off. Pressing Play is an explicit request to hear a reply, so Play now speaks even in Fast mode, while the drive itself stays silent in Fast mode. Checked with Fast mode on.
+16. **A clearer apology.** The Apology opening was “عذرًا على ذلك”. In Arabic “عذرًا” is often used to mean “excuse me”, so it may not be heard as a real apology, which matters when participants compare the styles. It is now “أعتذر عن ذلك” (“I apologise for that”), a first-person apology. Checked in the repair, the retry after the Decline turn and the research comparison.
 
 All 30 drive paths (5 choices after the repair × 3 Decline choices × 2 next-day choices) were run automatically, and a 47-point checklist (every expected Arabic line, the research comparison and the page controls) was checked on the live site, with voice answers simulated by a mocked recogniser.
 

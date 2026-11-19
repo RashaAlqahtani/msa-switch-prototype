@@ -252,7 +252,7 @@ const CONTENT={ar:"للتقنية أثرٌ واضح على الوظائف: فه�
                en:"Technology clearly affects jobs: it creates new jobs and changes the nature of others."};
 const STYLES=[
  {id:"plain",  name:"Just switch",  desc:"Switches to MSA without saying anything about it.",ar:"",en:""},
- {id:"apology",name:"Apology",      desc:"Says sorry, then switches.",ar:"عذرًا على ذلك.",en:"Sorry about that."},
+ {id:"apology",name:"Apology",      desc:"Says sorry, then switches.",ar:"أعتذر عن ذلك.",en:"I apologise for that."},
  // Grounding: repeats the request back so both sides share the same understanding
  {id:"confirm",name:"Confirmation", desc:"Repeats the request back to show it understood, then switches.",
   ar:"حسنًا، فهمتُ أنكِ تريدين الفصحى فقط، وسأردّ بها.",en:"OK, I understand you want MSA only, and I will reply in it."},
@@ -467,7 +467,7 @@ async function repair(){step(4);
  const map={sPlain:['plain','لا تعتذر، فقط انتقل.','Don’t apologise, just switch.','حسنًا. في المرة القادمة سأعود إلى الفصحى مباشرةً، دون أي مقدمة.','OK. Next time I will go straight back to MSA, with no opening at all.'],
   sExpl:['explain','وضّح لي ما حدث.','Tell me what happened.','حسنًا. في المرة القادمة سأقول ما حدث، هكذا: «انتقلتُ إلى اللهجة المصرية في ردّي السابق، وسأعود الآن إلى الفصحى.»','OK. Next time I will say what happened, like this: “I switched to Egyptian dialect in my previous reply, and I will now return to MSA.”'],
   sConf:['confirm','أكّد أنك فهمت.','Confirm you understood.','حسنًا. في المرة القادمة سأؤكد طلبكِ، هكذا: «فهمتُ أنكِ تريدين الفصحى فقط، وسأردّ بها.»','OK. Next time I will confirm your request, like this: “I understand you want MSA only, and I will reply in it.”'],
-  sApol:['apology','اعتذر.','Apologise.','حسنًا. في المرة القادمة سأعتذر، هكذا: «عذرًا على ذلك.»','OK. Next time I will apologise, like this: “Sorry about that.”']}[c.id];
+  sApol:['apology','اعتذر.','Apologise.','حسنًا. في المرة القادمة سأعتذر، هكذا: «أعتذر عن ذلك.»','OK. Next time I will apologise, like this: “I apologise for that.”']}[c.id];
  await saidOr(c,map[1],map[2]);await bot(map[3],map[4]);
  myStyle=STYLES.find(s=>s.id===map[0]);styleSaved=true;try{localStorage.setItem('msa-style',myStyle.id)}catch(e){}
  add('note','',`Adapted: style changed to "${myStyle.name}" by voice and saved.`);setMood('happy','She changed the style in one sentence.');
@@ -555,7 +555,7 @@ async function slip(){step(5);setC('');status('');
  if(c.id==='retry'){await saidOr(c,'حاول مرة أخرى بالفصحى.','Try MSA again.');
   // ADAPTATION: this second return to MSA uses the style she chose (the opening of her style, then the honest promise)
   const op={plain:['سأعود إلى الفصحى.','I will return to MSA.'],
-   apology:['عذرًا على ذلك. سأعود إلى الفصحى.','Sorry about that. I will return to MSA.'],
+   apology:['أعتذر عن ذلك. سأعود إلى الفصحى.','I apologise for that. I will return to MSA.'],
    confirm:['حسنًا، فهمتُ أنكِ تريدين الفصحى فقط، وسأردّ بها.','OK, I understand you want MSA only, and I will reply in it.'],
    explain:['انتقلتُ إلى اللهجة المصرية في ردّي السابق، وسأعود الآن إلى الفصحى.','I switched to Egyptian dialect in my previous reply, and I will now return to MSA.']}[myStyle.id];
   add('note','',`Back to MSA in her chosen style: ${myStyle.name}.`);
