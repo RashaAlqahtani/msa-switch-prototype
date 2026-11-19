@@ -226,7 +226,7 @@ button.chip{font-size:.72rem;padding:4px 9px;color:var(--muted)}
 <button class="b studyBtn" id="studyBtn">🅿️ Research comparison: 6 blind pairs (while parked)</button>
 <div class="research" id="research" hidden>
  <div class="rk">Researcher tools · not part of the driver's app</div>
- <div class="rd">Phase 3 evaluation: export the Study mode answers (which pairs were shown, which reply was preferred, and when).</div>
+ <div class="rd">Phase 3 evaluation: export the research comparison answers (which pairs were shown, which reply was preferred, and when).</div>
  <button class="b" id="dl">Download study answers (JSON)</button><span class="rd" id="dlInfo"></span>
 </div>
 </div>
@@ -365,8 +365,8 @@ async function panelView(head,body){pBody.classList.add('fade');await wait(250);
 /* =====================================================================
    5. FLOW: sense → infer → act loop; failure → repair → adaptation
    ===================================================================== */
-// Default style before any Study mode: Apology. Alghamdi et al. (2025): both native-Arabic and
-// non-native groups preferred apologies, so it has the broadest evidence. She can change it in Study mode.
+// Default style: Apology. Alghamdi et al. (2025): both native-Arabic and non-native groups preferred
+// apologies, so it has the broadest evidence. She can change it by voice in the repair, or in the research comparison.
 let pairs=[],pi=0,wins={},log=[],myStyle=STYLES.find(s=>s.id==="apology");
 let styleSaved=false;
 // Researcher tools live OUTSIDE the phone: data export is for the evaluation, not for the driver
@@ -391,7 +391,7 @@ async function start(){
  await user('وما أثرها على الوظائف؟','And what about its effect on jobs?');
  // Step 2 · Drift: the FAILURE. The system treats all Arabic as one variety.
  step(2);
- await bot('إزيِّك يا هانم؟ بُصّي بقى، الموضوع ده كبير أوي، وإنتي رأيك إيه فيه؟','How are you, ya hanem? Look, this topic is really big, and what do you think about it? (Egyptian dialect)');
+ await bot('بُصّي يا هانم، التكنولوجيا دي بتأثّر على الشغل جامد: فيه وظايف جديدة بتطلع، ووظايف تانية بتتغيّر.','Look, ya hanem, technology really affects work: new jobs come up, and other jobs change. (Egyptian dialect)');
  setMood('annoyed','It drifted into Egyptian dialect ("ya hanem"). She is confused.');
  add('note','','Failure: the assistant drifted into Egyptian dialect.');await beat();
  askStep()}
@@ -468,9 +468,12 @@ async function repair(){step(4);
   sExpl:['explain','وضّح لي ما حدث.','Tell me what happened.','حسنًا. في المرة القادمة سأقول ما حدث، هكذا: «انتقلتُ إلى اللهجة المصرية في ردّي السابق، وسأعود الآن إلى الفصحى.»','OK. Next time I will say what happened, like this: “I switched to Egyptian dialect in my previous reply, and I will now return to MSA.”'],
   sConf:['confirm','أكّد أنك فهمت.','Confirm you understood.','حسنًا. في المرة القادمة سأؤكد طلبكِ، هكذا: «فهمتُ أنكِ تريدين الفصحى فقط، وسأردّ بها.»','OK. Next time I will confirm your request, like this: “I understand you want MSA only, and I will reply in it.”'],
   sApol:['apology','اعتذر.','Apologise.','حسنًا. في المرة القادمة سأعتذر، هكذا: «أعتذر عن ذلك.»','OK. Next time I will apologise, like this: “I apologise for that.”']}[c.id];
- await saidOr(c,map[1],map[2]);await bot(map[3],map[4]);
+ await saidOr(c,map[1],map[2]);
+ const same=map[0]===myStyle.id;   // she named the style she already has: keep it, do not claim a change
+ if(same){await bot('حسنًا، سأبقى على هذه الطريقة.','OK, I will keep doing it this way.')}else await bot(map[3],map[4]);
  myStyle=STYLES.find(s=>s.id===map[0]);styleSaved=true;try{localStorage.setItem('msa-style',myStyle.id)}catch(e){}
- add('note','',`Adapted: style changed to "${myStyle.name}" by voice and saved.`);setMood('happy','She changed the style in one sentence.');
+ if(same){add('note','',`Kept: the style stays "${myStyle.name}" and is saved.`);setMood('happy','Her style is kept.')}
+ else{add('note','',`Adapted: style changed to "${myStyle.name}" by voice and saved.`);setMood('happy','She changed the style in one sentence.')}
  setC('<button class="b p" id="next">Continue the drive →</button>');$('next').onclick=slip}
 
 /* =====================================================================
@@ -485,7 +488,7 @@ async function exitStudy(){if(TTS)speechSynthesis.cancel();closePanel();await wa
 $('pX').onclick=exitStudy;
 async function studyMode(){closePanel();chat.innerHTML='';setC('');status('');
  document.querySelectorAll('#stepper i').forEach(x=>x.className='');$('stepLabel').textContent='Research comparison · parked';
- setMood('neutral','Parked: she compares reply styles once, before driving.');
+ setMood('neutral','Parked: she compares reply styles while the car is stopped.');
  add('note','','Research comparison: the car is parked. This is not part of the drive.');await wait(600);compare()}
 async function compare(){pairs=[];wins={};log=[];STYLES.forEach(s=>wins[s.id]=0);
  for(let i=0;i<STYLES.length;i++)for(let j=i+1;j<STYLES.length;j++)pairs.push(Math.random()<.5?[STYLES[i],STYLES[j]]:[STYLES[j],STYLES[i]]);
@@ -554,12 +557,12 @@ async function slip(){step(5);setC('');status('');
   {id:'eng',  label:'Switch to English',say:'بالإنجليزية',kw:['نجليز','نقليز','english'],prio:3}]);
  if(c.id==='retry'){await saidOr(c,'حاول مرة أخرى بالفصحى.','Try MSA again.');
   // ADAPTATION: this second return to MSA uses the style she chose (the opening of her style, then the honest promise)
-  const op={plain:['سأعود إلى الفصحى.','I will return to MSA.'],
+  const op={plain:['',''],   // Just switch: no opening at all
    apology:['أعتذر عن ذلك. سأعود إلى الفصحى.','I apologise for that. I will return to MSA.'],
    confirm:['حسنًا، فهمتُ أنكِ تريدين الفصحى فقط، وسأردّ بها.','OK, I understand you want MSA only, and I will reply in it.'],
    explain:['انتقلتُ إلى اللهجة المصرية في ردّي السابق، وسأعود الآن إلى الفصحى.','I switched to Egyptian dialect in my previous reply, and I will now return to MSA.']}[myStyle.id];
   add('note','',`Back to MSA in her chosen style: ${myStyle.name}.`);
-  await bot(op[0]+' وإن خرجتُ عنها مرة أخرى، فنبّهيني.',op[1]+' If I slip again, please tell me.');
+  await bot(op[0]?op[0]+' وإن خرجتُ عنها مرة أخرى، فنبّهيني.':'إن خرجتُ عن الفصحى مرة أخرى، فنبّهيني.',op[1]?op[1]+' If I slip again, please tell me.':'If I slip out of MSA again, please tell me.');
   setMood('happy','Back to MSA in her style, with an honest promise.');nextDay('msa')}
  else if(c.id==='cont'){await saidOr(c,'نكمل.','Let us continue.');
   await bot('حسنًا، سنكمل. ومتى أردتِ الفصحى، فقولي ذلك.','OK, we will continue. Whenever you want MSA, just say so.');nextDay('asis')}
