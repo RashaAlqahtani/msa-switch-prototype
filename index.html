@@ -460,7 +460,7 @@ async function repair(){step(4);
  const c=await voiceChoice([
   {id:'next',  label:'Keep this style →',primary:1,say:'نفس الطريقة',kw:['نفس','خله كذا','خلّه كذا','خليه كذا','كذا','keep','same'],prio:0},
   {id:'sPlain',chip:1,label:'“Don’t apologise”',say:'لا تعتذر',kw:['لا تعتذر','بدون اعتذار','بس غير','just switch','no apolog',"don't apolog",'dont apolog'],prio:3},
-  {id:'sExpl', chip:1,label:'“Tell me what happened”',say:'وضّح لي وش صار',kw:['وضح','وضّح','وش صار','ماذا حدث','اشرح','explain','what happened'],prio:2},
+  {id:'sExpl', chip:1,label:'“Tell me what happened”',say:'وضّح لي وش صار',kw:['وضح','وضّح','وش صار','ايش صار','إيش صار','ماذا حدث','ماذا حصل','وش حصل','ايش حصل','إيش حصل','اخبرني','أخبرني','خبرني','اشرح','explain','what happened'],prio:2},
   {id:'sConf', chip:1,label:'“Confirm you understood”',say:'أكّد إنك فهمت',kw:['أكد','اكد','أكّد','تأكيد','confirm'],prio:2},
   {id:'sApol', chip:1,label:'“Apologise”',say:'اعتذر',kw:['اعتذر','apolog'],prio:1}]);
  if(c.id==='next'){if(c.heard)await user(c.heard,'(heard by voice)');return slip()}
