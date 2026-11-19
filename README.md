@@ -1,6 +1,6 @@
 # Switching to Modern Standard Arabic: an in-car voice assistant prototype
 
-**README prose word count: 1235** (headings, tables, links and code not counted)
+**README prose word count: 1317** (headings, tables, links and code not counted)
 
 **Live prototype:** https://rashaalqahtani.github.io/msa-switch-prototype/ (open in Chrome; allow the microphone)
 
@@ -59,6 +59,7 @@ Main changes, why they were made and what was checked:
 15. **Play always speaks in the research comparison.** While trying the comparison I pressed ▶ Play and heard nothing, because Fast mode (meant for reviewers) turns all speech off. Pressing Play is an explicit request to hear a reply, so Play now speaks even in Fast mode, while the drive itself stays silent in Fast mode. Checked with Fast mode on.
 16. **A clearer apology.** The Apology opening was “عذرًا على ذلك”. In Arabic “عذرًا” is often used to mean “excuse me”, so it may not be heard as a real apology, which matters when participants compare the styles. It is now “أعتذر عن ذلك” (“I apologise for that”), a first-person apology. Checked in the repair, the retry after the Decline turn and the research comparison.
 17. **The next day keeps a clear choice without asking again.** If she had chosen “Try MSA again” in the Decline turn, the next day still asked “MSA or English?”. While testing I found this contradicted the claim that it remembers her choice, and repeated the annoyance of the original problem. Now, after “Try MSA again”, it simply continues in MSA and says so; it still asks after “Continue as it is” or “Switch to English”, where yesterday’s choice was not clear. Checked on all next-day paths.
+18. **Next-day buttons say what really happens.** After she had switched to English, the next day offered “Continue in MSA”, although the assistant was speaking English, so nothing in MSA could be continued. The buttons now follow yesterday’s choice: after English, “Continue in English” (also by saying “continue”) or “Try MSA again”; after “Continue as it is”, “Start in MSA” or “Start in English”. The replies match (“I will go back to MSA”, “I will start in MSA”). Checked on every next-day path.
 
 All 25 drive paths (5 choices after the repair × 5 endings: “Try MSA again”, or “Continue as it is” or “Switch to English” followed by MSA or English the next day) were run automatically, and a 47-point checklist (every expected Arabic line, the research comparison and the page controls) was checked on the live site, with voice answers simulated by a mocked recogniser.
 

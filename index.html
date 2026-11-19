@@ -579,16 +579,22 @@ function nextDay(choice){try{localStorage.setItem('msa-decline-choice',choice)}c
    await bot('مرحبًا بعودتكِ. سأكمل معكِ بالفصحى كما طلبتِ أمس. وإن خرجتُ عنها، فنبّهيني.','Welcome back. I will continue in MSA, as you asked yesterday. If I slip, please tell me.');
    setMood('happy','It kept her choice from yesterday. No need to ask again.');return END()}
   // Yesterday was not clear (MSA failed, or she moved to English): the assistant proposes; she decides (mixed initiative)
-  const MSA_OK=async c=>{await saidOr(c,'بالفصحى، لو سمحت.','In MSA, please.');await bot('حسنًا، سنكمل بالفصحى. وإن خرجتُ عنها إلى اللهجة، فنبّهيني.','OK, we will continue in MSA. If I slip into dialect, please tell me.');setMood('happy','She chose MSA. Clear from the first turn.')};
-  const EN_OK=async c=>{await saidOr(c,'بالإنجليزية، لو سمحت.','In English, please.');await bot('OK, we will continue in English.','','en-GB');setMood('happy','She chose English. It respected her choice.')};
-  if(choice==='english'){
+  // Labels and replies say what really happens: after English she "continues" in English or goes "back" to MSA;
+  // after "continue as it is" (dialect) nothing is a continuation, so she "starts" in MSA or English.
+  const wasEN=choice==='english';
+  const MSA_OK=async c=>{await saidOr(c,'بالفصحى، لو سمحت.','In MSA, please.');
+   await bot(wasEN?'حسنًا، سأعود إلى الفصحى. وإن خرجتُ عنها، فنبّهيني.':'حسنًا، سأبدأ بالفصحى. وإن خرجتُ عنها، فنبّهيني.',wasEN?'OK, I will go back to MSA. If I slip, please tell me.':'OK, I will start in MSA. If I slip, please tell me.');setMood('happy','She chose MSA.')};
+  const EN_OK=async c=>{await saidOr(c,'بالإنجليزية، لو سمحت.','In English, please.');await bot(wasEN?'OK, we will continue in English.':'OK, I will start in English.','','en-GB');setMood('happy','She chose English. It respected her choice.')};
+  if(wasEN){
    await bot('Welcome back. Yesterday we switched to English. Shall we continue in English, or try Modern Standard Arabic again?','','en-GB');
-  }else if(choice==='asis'){
+  }else{
    await bot('مرحبًا بعودتكِ. لم أتمكن أمس من الالتزام بالفصحى بثبات. هل تريدين أن أبدأ اليوم بالفصحى، أم بالإنجليزية؟','Welcome back. Yesterday I could not keep to MSA reliably. Would you like me to start in MSA today, or in English?');
   }
-  const c=await voiceChoice([
-   {id:'pMSA',label:'Continue in MSA',primary:1,say:'بالفصحى',kw:['فصح','عربي','msa','arabic'],prio:1},
-   {id:'pEN', label:'Continue in English',say:'بالإنجليزية',kw:['نجليز','نقليز','english'],prio:2}]);
+  const c=await voiceChoice(wasEN?[
+   {id:'pEN', label:'Continue in English',primary:1,say:'بالإنجليزية',kw:['نجليز','نقليز','english','continue','نكمل','كمل'],prio:1},
+   {id:'pMSA',label:'Try MSA again',say:'بالفصحى',kw:['فصح','عربي','msa','arabic'],prio:2}]:[
+   {id:'pMSA',label:'Start in MSA',primary:1,say:'بالفصحى',kw:['فصح','عربي','msa','arabic'],prio:1},
+   {id:'pEN', label:'Start in English',say:'بالإنجليزية',kw:['نجليز','نقليز','english'],prio:2}]);
   if(c.id==='pMSA')await MSA_OK(c);else await EN_OK(c);
   END()}}
 </script></body></html>
