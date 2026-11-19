@@ -458,7 +458,7 @@ async function repair(){step(4);
  setMood('happy','Back to MSA. She understands again.');await beat();
  // ADAPTATION by voice: she can change the acknowledgement style in one spoken sentence, or just carry on
  const c=await voiceChoice([
-  {id:'next',  label:'Continue the drive →',primary:1,say:'لا تعتذر',kw:['نكمل','كمل','continue','يلا'],prio:0},
+  {id:'next',  label:'Keep this style →',primary:1,say:'نفس الطريقة',kw:['نفس','خله كذا','خلّه كذا','خليه كذا','كذا','keep','same'],prio:0},
   {id:'sPlain',chip:1,label:'“Don’t apologise”',say:'لا تعتذر',kw:['لا تعتذر','بدون اعتذار','بس غير','just switch','no apolog',"don't apolog",'dont apolog'],prio:3},
   {id:'sExpl', chip:1,label:'“Tell me what happened”',say:'وضّح لي وش صار',kw:['وضح','وضّح','وش صار','ماذا حدث','اشرح','explain','what happened'],prio:2},
   {id:'sConf', chip:1,label:'“Confirm you understood”',say:'أكّد إنك فهمت',kw:['أكد','اكد','أكّد','تأكيد','confirm'],prio:2},
