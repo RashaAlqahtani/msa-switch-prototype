@@ -473,7 +473,7 @@ async function repair(){step(4);
  if(same){await bot('حسنًا، سأبقى على هذه الطريقة.','OK, I will keep doing it this way.')}else await bot(map[3],map[4]);
  myStyle=STYLES.find(s=>s.id===map[0]);styleSaved=true;try{localStorage.setItem('msa-style',myStyle.id)}catch(e){}
  if(same){add('note','',`Kept: the style stays "${myStyle.name}" and is saved.`);setMood('happy','Her style is kept.')}
- else{add('note','',`Adapted: style changed to "${myStyle.name}" by voice and saved.`);setMood('happy','She changed the style in one sentence.')}
+ else{add('note','',`Adapted: style changed to "${myStyle.name}"${c.heard?' by voice':''} and saved.`);setMood('happy',c.heard?'She changed the style in one sentence.':'She changed the style.')}
  const go=await voiceChoice([{id:'next',label:'Continue the drive →',primary:1,kw:['نكمل','كمل','continue','يلا','next'],prio:1}]);
  if(go.heard)await user(go.heard,'(heard by voice)');slip()}
 
