@@ -572,20 +572,23 @@ function nextDay(choice){try{localStorage.setItem('msa-decline-choice',choice)}c
  $('nd').onclick=async()=>{setC('');step(6);chat.innerHTML='';setMood('neutral','The next day, she starts the car again.');
   const remembered={msa:'she wants MSA',asis:'MSA was not kept reliably yesterday',english:'she switched to English yesterday'}[choice];
   add('note','',`The next day · the assistant remembers: ${remembered}; chosen style: ${myStyle.name}.`);await beat();
-  // The assistant proposes; the user decides (mixed initiative)
+  const END=()=>{setC('<button class="b" id="again">↺ Replay the drive</button><button class="b" id="study2">🅿️ Research comparison</button>');
+   $('again').onclick=start;$('study2').onclick=studyMode;status('End of the drive.')};
+  // She clearly asked for MSA yesterday: do not ask again, just keep her choice
+  if(choice==='msa'){
+   await bot('مرحبًا بعودتكِ. سأكمل معكِ بالفصحى كما طلبتِ أمس. وإن خرجتُ عنها، فنبّهيني.','Welcome back. I will continue in MSA, as you asked yesterday. If I slip, please tell me.');
+   setMood('happy','It kept her choice from yesterday. No need to ask again.');return END()}
+  // Yesterday was not clear (MSA failed, or she moved to English): the assistant proposes; she decides (mixed initiative)
   const MSA_OK=async c=>{await saidOr(c,'بالفصحى، لو سمحت.','In MSA, please.');await bot('حسنًا، سنكمل بالفصحى. وإن خرجتُ عنها إلى اللهجة، فنبّهيني.','OK, we will continue in MSA. If I slip into dialect, please tell me.');setMood('happy','She chose MSA. Clear from the first turn.')};
   const EN_OK=async c=>{await saidOr(c,'بالإنجليزية، لو سمحت.','In English, please.');await bot('OK, we will continue in English.','','en-GB');setMood('happy','She chose English. It respected her choice.')};
   if(choice==='english'){
    await bot('Welcome back. Yesterday we switched to English. Shall we continue in English, or try Modern Standard Arabic again?','','en-GB');
   }else if(choice==='asis'){
    await bot('مرحبًا بعودتكِ. لم أتمكن أمس من الالتزام بالفصحى بثبات. هل تريدين أن أبدأ اليوم بالفصحى، أم بالإنجليزية؟','Welcome back. Yesterday I could not keep to MSA reliably. Would you like me to start in MSA today, or in English?');
-  }else{
-   await bot('مرحبًا بعودتكِ. هل نكمل بالفصحى، أم تفضّلين الإنجليزية؟','Welcome back. Shall we continue in MSA, or would you prefer English?');
   }
   const c=await voiceChoice([
    {id:'pMSA',label:'Continue in MSA',primary:1,say:'بالفصحى',kw:['فصح','عربي','msa','arabic'],prio:1},
    {id:'pEN', label:'Continue in English',say:'بالإنجليزية',kw:['نجليز','نقليز','english'],prio:2}]);
   if(c.id==='pMSA')await MSA_OK(c);else await EN_OK(c);
-  setC('<button class="b" id="again">↺ Replay the drive</button><button class="b" id="study2">🅿️ Research comparison</button>');
-  $('again').onclick=start;$('study2').onclick=studyMode;status('End of the drive.')}}
+  END()}}
 </script></body></html>
