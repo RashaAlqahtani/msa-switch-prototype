@@ -20,6 +20,7 @@ A driver talks hands-free to a voice assistant on a phone mount. The assistant d
 | Fallback buttons | Placeholder: they simulate her speech when the microphone cannot work |
 | Replies written by a language model in her chosen style | Planned |
 | Automatic detection of dialect drift before a reply is spoken | Planned |
+| A control to make the assistant forget her saved choices | Planned |
 
 The system diagram is in `system-diagram.png`.
 
