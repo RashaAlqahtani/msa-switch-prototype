@@ -1,6 +1,6 @@
 # Switching to Modern Standard Arabic: an in-car voice assistant prototype
 
-**README prose word count: 1592** (headings, tables, links and code not counted)
+**README prose word count: 1594** (headings, tables, links and code not counted)
 
 **Live prototype:** https://rashaalqahtani.github.io/msa-switch-prototype/ (open in Chrome; allow the microphone)
 
