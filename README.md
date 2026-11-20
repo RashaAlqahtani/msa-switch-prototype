@@ -1,6 +1,6 @@
 # Switching to Modern Standard Arabic: an in-car voice assistant prototype
 
-**README prose word count: 1594** (headings, tables, links and code not counted)
+**README prose word count: 824** (headings, tables, links and code not counted)
 
 **Live prototype:** https://rashaalqahtani.github.io/msa-switch-prototype/ (open in Chrome; allow the microphone)
 
@@ -42,28 +42,20 @@ The system diagram is in `system-diagram.png`.
 
 Main changes, why they were made and what was checked:
 
-1. **Comparison moved out of the drive.** At first the six comparisons happened during the drive. Asking a driver to compare replies is unsafe and slow, so the drive became the product and the comparison became a separate research tool used while parked.
-2. **Labels hidden while choosing, shown after each choice**, so style names such as "Explanation" do not bias the choice.
-3. **Decline turn with three options** (try MSA again, continue, switch to English). My original problem was an assistant that claimed to use MSA when it did not; the Decline turn states the limit honestly instead.
-4. **Next day follows her actual choice.** While testing I found the next day always started in MSA even after choosing English. Fixed, and she now chooses the language by voice.
-5. **No promises the assistant cannot keep.** The confirmation reply said it would use MSA "from now on", then the assistant slipped. Removed; later replies say "if I slip again, please tell me".
-6. **Default style changed from Confirmation to Apology**, because both groups in Alghamdi et al. (2025) preferred apologies.
-7. **Style change by one spoken sentence** ("don't apologise") instead of a long comparison screen, because a driver needs zero set-up. The assistant mentions this option once only.
-8. **Every answer can be spoken**, not only the first request; buttons are a fallback.
-9. **Honest labels**: the drift, the next day and the buttons are labelled as simulated or placeholder; a "What is real?" panel and a reviewer guide were added.
-10. **Feminine Arabic forms** throughout, because the driver is a woman.
-11. **Found by testing the live site with a real microphone** (commit d9edeae): the end buttons disappeared when the browser delivered the same spoken answer twice, so each question now accepts one answer only; the first voice step looked different from the others, so every step now has the same controls and one Arabic/English switch; Safari stopped listening, so the page now recommends Chrome.
-12. **The chosen style is shown and used in the same drive** (commit d9edeae). At first a style change only took effect after a replay; now the assistant gives an example of the new style at once and uses it the next time it returns to MSA.
-13. **The hint matches what she just heard.** While reviewing the repair I noticed that after a Confirmation the assistant still said “for example, say: don’t apologise”, although it had not apologised, and the hint was attached to the end of the answer about jobs. The hint is now its own short turn after the answer, and its example is the opposite of the style she just heard (Apology → “don’t apologise”, Just switch → “apologise”, Confirmation → “tell me what happened”, Explanation → “confirm you understood”). Checked for all four styles.
-14. **A clearer way to keep the style.** After the repair the main button said “Continue the drive” and the spoken answer was “نكمل”. While testing I found this unclear: it could mean keeping the style or ignoring the hint, and “نكمل” also means “continue as it is” in the Decline turn. The button is now “Keep this style” and she can say “نفس الطريقة” or “خلّه كذا”. Checked by voice: these phrases keep the style, and “نكمل” is no longer an answer after the repair.
-15. **Play always speaks in the research comparison.** While trying the comparison I pressed ▶ Play and heard nothing, because Fast mode (meant for reviewers) turns all speech off. Pressing Play is an explicit request to hear a reply, so Play now speaks even in Fast mode, while the drive itself stays silent in Fast mode. Checked with Fast mode on.
-16. **A clearer apology.** The Apology opening was “عذرًا على ذلك”. In Arabic “عذرًا” is often used to mean “excuse me”, so it may not be heard as a real apology, which matters when participants compare the styles. It is now “أعتذر عن ذلك” (“I apologise for that”), a first-person apology. Checked in the repair, the retry after the Decline turn and the research comparison.
-17. **The next day keeps a clear choice without asking again.** If she had chosen “Try MSA again” in the Decline turn, the next day still asked “MSA or English?”. While testing I found this contradicted the claim that it remembers her choice, and repeated the annoyance of the original problem. Now, after “Try MSA again”, it simply continues in MSA and says so; it still asks after “Continue as it is” or “Switch to English”, where yesterday’s choice was not clear. Checked on all next-day paths.
-18. **Next-day buttons say what really happens.** After she had switched to English, the next day offered “Continue in MSA”, although the assistant was speaking English, so nothing in MSA could be continued. The buttons now follow yesterday’s choice: after English, “Continue in English” (also by saying “continue”) or “Try MSA again”; after “Continue as it is”, “Start in MSA” or “Start in English”. The replies match (“I will go back to MSA”, “I will start in MSA”). Checked on every next-day path.
-19. **Line-by-line logic check.** I re-read every reply in its context and fixed four mismatches: the drift opened with a greeting (“how are you?”) in the middle of the conversation and did not answer her question, so it now gives the same answer about jobs in Egyptian dialect, and only the variety differs from the MSA repair; “Just switch” said “I will return to MSA” when she asked it to try again, which is an opening, so it now only says “if I slip again, tell me”; naming the style she already had was reported as a change, so it now says the style is kept; and the caption said the comparison happens “before driving” even when opened after a drive. All 25 paths were run again.
-20. **Independent consistency check.** A separate review compared the report, the code, this README and the figures. It found: her reminder (“I told you, MSA!”) and her opening questions are scripted, but this was not stated everywhere, so they are now listed as simulated in the report, the “What is real?” panel, this table and the diagram; her Decline choice was saved but never read back, so the next day now reads it from browser storage; after the Decline turn, “Try MSA again” said “in my previous reply… I will return to MSA” although the previous reply was already in MSA, so it now says “a moment ago… I will stay in MSA”; “Continue the drive” after a style change could only be tapped, so it now also accepts “نكمل” by voice; the planned forget control was added to the panel and the diagram. All 25 paths were run again.
+1. **Comparison moved out of the drive, and made blind.** Comparing replies while driving is unsafe, so it became a separate tool used while parked; style names are shown only after each choice so they do not bias it.
+2. **Decline turn with three options** (try MSA again, continue, English). My original problem was an assistant that claimed to use MSA when it did not; this turn states the limit instead.
+3. **The next day follows her choice.** Testing showed it always started in MSA, even after English. Now, after "Try MSA again" it continues in MSA without asking; otherwise it asks, with buttons that match what happened ("Continue in English", "Start in MSA"). Checked on every next-day path.
+4. **Apology as default, worded clearly.** Both groups in Alghamdi et al. (2025) preferred apologies. «عذرًا» can mean "excuse me", so it became «أعتذر عن ذلك».
+5. **No promises it cannot keep.** The confirmation reply said it would use MSA "from now on", then slipped. Removed; replies now say "if I slip again, please tell me".
+6. **Style change by one spoken sentence**, mentioned once as its own short turn after the answer. Its example is the opposite of the style she just heard (after an apology: "don't apologise").
+7. **Every drive answer can be spoken**; buttons are a fallback. "Continue" was ambiguous after the repair, so the option became "Keep this style" («نفس الطريقة»).
+8. **Honest labels.** Scripted parts (the drift, her opening questions and reminder, the next day) and the placeholder buttons are labelled; a "What is real?" panel was added.
+9. **Feminine Arabic forms** throughout, because the driver is a woman.
+10. **Play always speaks** in the research comparison, even in Fast mode, because pressing it is a request to hear the reply.
+11. **Found by testing with a real microphone** (commit d9edeae). A repeated speech result made buttons disappear, so each question accepts one answer; every step got the same controls; Safari stopped listening, so the page now recommends Chrome; a new style is now used in the same drive.
+12. **Logic and consistency checks.** Re-reading every reply and checking the report, code and figures against each other led to fixes such as: the drift now answers her question in dialect, and the Decline choice is read back from storage.
 
-All 25 drive paths (5 choices after the repair × 5 endings: “Try MSA again”, or “Continue as it is” or “Switch to English” followed by MSA or English the next day) were run automatically, and a 47-point checklist (every expected Arabic line, the research comparison and the page controls) was checked on the live site, with voice answers simulated by a mocked recogniser.
+All 25 drive paths were run automatically, and the expected lines were checked on the live site with voice answers simulated.
 
 ## AI assistance
 
